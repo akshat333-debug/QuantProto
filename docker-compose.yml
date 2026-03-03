@@ -1,0 +1,79 @@
+version: "3.9"
+
+services:
+  # ── QuantProto App ──────────────────────────────────────────────────
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: quantproto-app
+    ports:
+      - "8000:8000"
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - DATABASE_URL=postgresql://quantproto:quantproto@timescaledb:5432/quantproto
+      - JWT_SECRET=quantproto-dev-secret-change-in-prod
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8000/health" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - quantproto-net
+    restart: unless-stopped
+
+  # ── TimescaleDB (PostgreSQL) ────────────────────────────────────────
+  timescaledb:
+    image: timescale/timescaledb:latest-pg15
+    container_name: quantproto-timescaledb
+    environment:
+      POSTGRES_USER: quantproto
+      POSTGRES_PASSWORD: quantproto
+      POSTGRES_DB: quantproto
+    ports:
+      - "5432:5432"
+    volumes:
+      - timescale-data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U quantproto -d quantproto" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - quantproto-net
+    restart: unless-stopped
+
+  # ── Redis ───────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: quantproto-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - quantproto-net
+    restart: unless-stopped
+
+# ── Volumes ─────────────────────────────────────────────────────────
+volumes:
+  timescale-data:
+    driver: local
+  redis-data:
+    driver: local
+
+# ── Networks ────────────────────────────────────────────────────────
+networks:
+  quantproto-net:
+    driver: bridge
