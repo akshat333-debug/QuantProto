@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useTheme } from "next-themes";
 import {
     Sun, Moon, Activity, TrendingUp, TrendingDown, Shield, BarChart3,
@@ -39,9 +39,12 @@ type StressData = {
     monte_carlo: { median_terminal: number; p5: number; p95: number; prob_loss: number; worst_dd: number; paths: number[][] };
 };
 
-// ── Theme Toggle ──
+// ── Theme Toggle (deferred to avoid hydration mismatch) ──
 function ThemeToggle() {
     const { theme, setTheme } = useTheme();
+    const [mounted, setMounted] = useState(false);
+    useEffect(() => setMounted(true), []);
+    if (!mounted) return <div className="w-9 h-9" />; // placeholder to avoid layout shift
     return (
         <button
             onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
@@ -72,8 +75,8 @@ function MetricCard({ label, value, sub, icon: Icon, color = "text-gray-100" }: 
 function DecisionBadge({ action, passed }: { action: string; passed: boolean }) {
     return (
         <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold ${passed
-                ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
-                : "bg-red-500/20 text-red-400 border border-red-500/30"
+            ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
+            : "bg-red-500/20 text-red-400 border border-red-500/30"
             }`}>
             {passed ? <Shield className="w-4 h-4" /> : <AlertTriangle className="w-4 h-4" />}
             {action}
@@ -236,8 +239,8 @@ export default function Dashboard() {
                                     key={id}
                                     onClick={() => setActiveTab(id)}
                                     className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${activeTab === id
-                                            ? "bg-blue-600 text-white"
-                                            : "text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-[#1F1F23]"
+                                        ? "bg-blue-600 text-white"
+                                        : "text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-[#1F1F23]"
                                         }`}
                                 >
                                     <Icon className="w-4 h-4" />
