@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import {
     LineChart, Line, AreaChart, Area, BarChart, Bar, XAxis, YAxis,
-    CartesianGrid, Tooltip, ResponsiveContainer, RadarChart, Radar,
+    CartesianGrid, Tooltip, ResponsiveContainer, Legend, RadarChart, Radar,
     PolarGrid, PolarAngleAxis, PolarRadiusAxis, Cell, PieChart as RPieChart,
     Pie,
 } from "recharts";
@@ -21,7 +21,7 @@ type AnalysisData = {
         action: string; sharpe: number; sortino: number; var_95: number;
         cvar_95: number; max_drawdown: number; calmar: number; pain_index: number;
         total_return: number; n_splits: number; gate_passed: boolean;
-        gate_violations: { metric: string; value: number; threshold: number }[];
+        gate_violations: { metric: string; value: number; rule: string; limit: number }[];
         bootstrap_ci: { lower: number; upper: number; point: number };
     };
     equity_curve: { dates: string[]; values: number[] };
@@ -60,13 +60,13 @@ function MetricCard({ label, value, sub, icon: Icon, color = "text-gray-100" }: 
     label: string; value: string; sub?: string; icon: React.ElementType; color?: string;
 }) {
     return (
-        <div className="bg-white dark:bg-[#0F0F12] rounded-xl p-5 border border-gray-200 dark:border-[#1F1F23] hover:translate-y-[-2px] hover:shadow-lg transition-all duration-200">
-            <div className="flex items-center justify-between mb-3">
-                <span className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">{label}</span>
-                <Icon className={`w-4 h-4 ${color}`} />
+        <div className="bg-white dark:bg-[#0F0F12] rounded-xl p-4 sm:p-5 border border-gray-200 dark:border-[#1F1F23] hover:translate-y-[-2px] hover:shadow-lg transition-all duration-200 min-w-0">
+            <div className="flex items-center justify-between mb-2">
+                <span className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 truncate mr-2">{label}</span>
+                <Icon className={`w-4 h-4 flex-shrink-0 ${color}`} />
             </div>
-            <div className={`text-2xl font-bold ${color}`}>{value}</div>
-            {sub && <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">{sub}</div>}
+            <div className={`text-lg sm:text-2xl font-bold truncate ${color}`}>{value}</div>
+            {sub && <div className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 mt-1 truncate">{sub}</div>}
         </div>
     );
 }
@@ -259,14 +259,14 @@ export default function Dashboard() {
                                     </span>
                                 </div>
 
-                                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                                     <MetricCard label="Total Return" value={`${data.summary.total_return > 0 ? "+" : ""}${data.summary.total_return}%`} icon={TrendingUp} color={data.summary.total_return >= 0 ? "text-emerald-500" : "text-red-500"} />
                                     <MetricCard label="Sharpe Ratio" value={data.summary.sharpe.toFixed(2)} sub="Annualised" icon={Target} color={data.summary.sharpe >= 1 ? "text-emerald-500" : data.summary.sharpe >= 0.5 ? "text-amber-500" : "text-red-500"} />
                                     <MetricCard label="Max Drawdown" value={`${data.summary.max_drawdown}%`} sub="Peak to trough" icon={TrendingDown} color="text-red-500" />
                                     <MetricCard label="VaR (95%)" value={`${data.summary.var_95}%`} sub="Daily" icon={Shield} color="text-amber-500" />
                                 </div>
 
-                                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                                     <MetricCard label="Sortino" value={data.summary.sortino.toFixed(2)} icon={Activity} color="text-blue-500" />
                                     <MetricCard label="CVaR (95%)" value={`${data.summary.cvar_95}%`} icon={AlertTriangle} color="text-red-500" />
                                     <MetricCard label="Calmar" value={data.summary.calmar.toFixed(2)} icon={Layers} color="text-purple-500" />
@@ -376,23 +376,24 @@ export default function Dashboard() {
                                     <div className="bg-white dark:bg-[#0F0F12] rounded-xl p-5 border border-gray-200 dark:border-[#1F1F23]">
                                         <h3 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-4">Correlation Matrix</h3>
                                         <div className="overflow-x-auto">
-                                            <table className="w-full text-xs">
+                                            <table className="text-xs border-separate" style={{ borderSpacing: "4px" }}>
                                                 <thead>
                                                     <tr>
-                                                        <th className="pb-2"></th>
+                                                        <th className="pb-2 w-14"></th>
                                                         {data.correlation.tickers.map((t) => (
-                                                            <th key={t} className="pb-2 px-2 font-semibold">{t}</th>
+                                                            <th key={t} className="pb-2 px-3 font-semibold text-center min-w-[54px]">{t}</th>
                                                         ))}
                                                     </tr>
                                                 </thead>
                                                 <tbody>
                                                     {data.correlation.tickers.map((t, i) => (
                                                         <tr key={t}>
-                                                            <td className="py-1 pr-2 font-semibold">{t}</td>
+                                                            <td className="py-2 pr-2 font-semibold text-right">{t}</td>
                                                             {data.correlation.matrix[i].map((v, j) => (
-                                                                <td key={j} className="py-1 px-2 text-center" style={{
-                                                                    backgroundColor: `rgba(${v > 0 ? "5,150,105" : "220,38,38"}, ${Math.abs(v) * 0.4})`,
-                                                                    borderRadius: "4px",
+                                                                <td key={j} className="py-2 px-3 text-center font-mono" style={{
+                                                                    backgroundColor: `rgba(${v > 0 ? "5,150,105" : "220,38,38"}, ${Math.abs(v) * 0.5})`,
+                                                                    borderRadius: "6px",
+                                                                    minWidth: "54px",
                                                                 }}>
                                                                     {v.toFixed(2)}
                                                                 </td>
@@ -439,7 +440,7 @@ export default function Dashboard() {
                                         </h3>
                                         {data.summary.gate_violations.map((v, i) => (
                                             <div key={i} className="text-sm text-red-300 mb-1">
-                                                <strong>{v.metric}</strong>: {v.value.toFixed(4)} (threshold: {v.threshold})
+                                                <strong>{v.metric}</strong>: {typeof v.value === "number" ? v.value.toFixed(4) : v.value} ({v.rule} limit: {typeof v.limit === "number" ? v.limit.toFixed(4) : v.limit})
                                             </div>
                                         ))}
                                     </div>
@@ -507,62 +508,81 @@ export default function Dashboard() {
                         )}
 
                         {/* Portfolio Tab */}
-                        {activeTab === "portfolio" && (
-                            <div className="space-y-6">
-                                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                                    {[
-                                        { name: "Mean-Variance", weights: data.portfolio.mean_variance, color: "#2563EB" },
-                                        { name: "Risk Parity", weights: data.portfolio.risk_parity, color: "#059669" },
-                                        { name: "Max Sharpe", weights: data.portfolio.max_sharpe, color: "#9333EA" },
-                                    ].map(({ name, weights, color }) => (
-                                        <div key={name} className="bg-white dark:bg-[#0F0F12] rounded-xl p-5 border border-gray-200 dark:border-[#1F1F23]">
-                                            <h3 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-4">{name}</h3>
-                                            <ResponsiveContainer width="100%" height={200}>
-                                                <RPieChart>
-                                                    <Pie
-                                                        data={data.portfolio.tickers.map((t, i) => ({ name: t, value: weights[i] }))}
-                                                        cx="50%" cy="50%" innerRadius={50} outerRadius={80}
-                                                        dataKey="value" nameKey="name" label={({ name, value }) => `${name}: ${value}%`}
-                                                    >
-                                                        {data.portfolio.tickers.map((_, i) => (
-                                                            <Cell key={i} fill={["#2563EB", "#059669", "#9333EA", "#DC2626", "#D97706", "#6366F1", "#EC4899"][i % 7]} />
+                        {activeTab === "portfolio" && (() => {
+                            const PIE_COLORS = ["#2563EB", "#059669", "#9333EA", "#DC2626", "#D97706", "#6366F1", "#EC4899"];
+                            return (
+                                <div className="space-y-6">
+                                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                                        {[
+                                            { name: "Mean-Variance", weights: data.portfolio.mean_variance },
+                                            { name: "Risk Parity", weights: data.portfolio.risk_parity },
+                                            { name: "Max Sharpe", weights: data.portfolio.max_sharpe },
+                                        ].map(({ name, weights }) => {
+                                            const pieData = data.portfolio.tickers
+                                                .map((t, i) => ({ name: t, value: weights[i] }))
+                                                .filter((d) => d.value > 0.5);
+                                            return (
+                                                <div key={name} className="bg-white dark:bg-[#0F0F12] rounded-xl p-5 border border-gray-200 dark:border-[#1F1F23]">
+                                                    <h3 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-4">{name}</h3>
+                                                    <ResponsiveContainer width="100%" height={200}>
+                                                        <RPieChart>
+                                                            <Pie
+                                                                data={pieData}
+                                                                cx="50%" cy="50%" innerRadius={45} outerRadius={75}
+                                                                dataKey="value" nameKey="name"
+                                                                label={false} labelLine={false}
+                                                            >
+                                                                {pieData.map((_, i) => (
+                                                                    <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+                                                                ))}
+                                                            </Pie>
+                                                            <Tooltip formatter={(v: number) => `${v.toFixed(1)}%`} />
+                                                        </RPieChart>
+                                                    </ResponsiveContainer>
+                                                    {/* Legend */}
+                                                    <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2 justify-center">
+                                                        {pieData.map((d, i) => (
+                                                            <div key={d.name} className="flex items-center gap-1 text-xs">
+                                                                <span className="w-2.5 h-2.5 rounded-sm flex-shrink-0" style={{ background: PIE_COLORS[i % PIE_COLORS.length] }} />
+                                                                <span className="text-gray-600 dark:text-gray-300">{d.name}: {d.value.toFixed(1)}%</span>
+                                                            </div>
                                                         ))}
-                                                    </Pie>
-                                                    <Tooltip />
-                                                </RPieChart>
-                                            </ResponsiveContainer>
-                                        </div>
-                                    ))}
-                                </div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
 
-                                <div className="bg-white dark:bg-[#0F0F12] rounded-xl p-5 border border-gray-200 dark:border-[#1F1F23]">
-                                    <h3 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-4">Allocation Comparison</h3>
-                                    <ResponsiveContainer width="100%" height={300}>
-                                        <BarChart data={data.portfolio.tickers.map((t, i) => ({
-                                            ticker: t,
-                                            "Mean-Variance": data.portfolio.mean_variance[i],
-                                            "Risk Parity": data.portfolio.risk_parity[i],
-                                            "Max Sharpe": data.portfolio.max_sharpe[i],
-                                        }))}>
-                                            <CartesianGrid strokeDasharray="3 3" stroke="#1F1F23" />
-                                            <XAxis dataKey="ticker" tick={{ fontSize: 11 }} stroke="#6B7280" />
-                                            <YAxis tick={{ fontSize: 10 }} stroke="#6B7280" unit="%" />
-                                            <Tooltip content={<ChartTooltip />} />
-                                            <Bar dataKey="Mean-Variance" fill="#2563EB" radius={[4, 4, 0, 0]} />
-                                            <Bar dataKey="Risk Parity" fill="#059669" radius={[4, 4, 0, 0]} />
-                                            <Bar dataKey="Max Sharpe" fill="#9333EA" radius={[4, 4, 0, 0]} />
-                                        </BarChart>
-                                    </ResponsiveContainer>
+                                    <div className="bg-white dark:bg-[#0F0F12] rounded-xl p-5 border border-gray-200 dark:border-[#1F1F23]">
+                                        <h3 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-4">Allocation Comparison</h3>
+                                        <ResponsiveContainer width="100%" height={320}>
+                                            <BarChart data={data.portfolio.tickers.map((t, i) => ({
+                                                ticker: t,
+                                                "Mean-Variance": data.portfolio.mean_variance[i],
+                                                "Risk Parity": data.portfolio.risk_parity[i],
+                                                "Max Sharpe": data.portfolio.max_sharpe[i],
+                                            }))} barGap={2} barCategoryGap="20%">
+                                                <CartesianGrid strokeDasharray="3 3" stroke="#1F1F23" />
+                                                <XAxis dataKey="ticker" tick={{ fontSize: 11 }} stroke="#6B7280" />
+                                                <YAxis tick={{ fontSize: 10 }} stroke="#6B7280" unit="%" />
+                                                <Tooltip content={<ChartTooltip />} />
+                                                <Legend wrapperStyle={{ fontSize: 12 }} />
+                                                <Bar dataKey="Mean-Variance" fill="#2563EB" radius={[4, 4, 0, 0]} />
+                                                <Bar dataKey="Risk Parity" fill="#059669" radius={[4, 4, 0, 0]} />
+                                                <Bar dataKey="Max Sharpe" fill="#9333EA" radius={[4, 4, 0, 0]} />
+                                            </BarChart>
+                                        </ResponsiveContainer>
+                                    </div>
                                 </div>
-                            </div>
-                        )}
+                            );
+                        })()}
 
                         {/* Stress Test Tab */}
                         {activeTab === "stress" && (
                             <div className="space-y-6">
                                 <div className="bg-white dark:bg-[#0F0F12] rounded-xl p-4 border border-gray-200 dark:border-[#1F1F23]">
-                                    <div className="flex items-end gap-4">
-                                        <div className="flex-1">
+                                    <div className="flex flex-col sm:flex-row items-stretch sm:items-end gap-4">
+                                        <div className="sm:w-72">
                                             <label className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1 block">Scenario</label>
                                             <select
                                                 value={scenario}
@@ -579,7 +599,7 @@ export default function Dashboard() {
                                         <button
                                             onClick={runStress}
                                             disabled={stressLoading}
-                                            className="h-10 px-6 rounded-lg bg-red-600 hover:bg-red-500 text-white font-semibold text-sm flex items-center gap-2 transition-colors disabled:opacity-50"
+                                            className="h-10 px-6 rounded-lg bg-red-600 hover:bg-red-500 text-white font-semibold text-sm flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
                                         >
                                             {stressLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
                                             Run Stress Test
