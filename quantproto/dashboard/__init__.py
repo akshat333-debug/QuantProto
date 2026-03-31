@@ -2,6 +2,10 @@
 
 FastAPI WebSocket server that streams real-time equity,
 drawdown, regime, and alert data.
+
+Security:
+- Origin validation on WebSocket connections
+- Protocol-aware (ws/wss) client-side URL
 """
 
 from __future__ import annotations
@@ -16,6 +20,10 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 
 app = FastAPI(title="QuantProto Dashboard", version="0.1.0")
+
+# Allowed WebSocket origins (comma-separated env var)
+_ws_origins = os.getenv("WS_ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:8001")
+WS_ALLOWED_ORIGINS = {o.strip() for o in _ws_origins.split(",") if o.strip()}
 
 
 # Connection manager
@@ -43,6 +51,12 @@ manager = ConnectionManager()
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
+    # Validate origin header
+    origin = websocket.headers.get("origin", "")
+    if WS_ALLOWED_ORIGINS and origin not in WS_ALLOWED_ORIGINS:
+        await websocket.close(code=4003, reason="Origin not allowed")
+        return
+
     await manager.connect(websocket)
     try:
         while True:
@@ -205,7 +219,8 @@ DASHBOARD_HTML = """<!DOCTYPE html>
   </div>
 
   <script>
-    const ws = new WebSocket(`ws://${location.host}/ws`);
+    const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const ws = new WebSocket(`${proto}//${location.host}/ws`);
     const log = document.getElementById('log');
     const connStatus = document.getElementById('conn-status');
 
@@ -217,22 +232,36 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       connStatus.textContent = 'Disconnected';
       addLog('Connection lost');
     };
+    ws.onerror = (e) => {
+      addLog('WebSocket error: ' + e.type);
+    };
     ws.onmessage = (e) => {
-      const msg = JSON.parse(e.data);
+      let msg;
+      try {
+        msg = JSON.parse(e.data);
+      } catch (err) {
+        addLog('Bad message: ' + e.data);
+        return;
+      }
       if (msg.type === 'metrics') updateMetrics(msg.data);
       addLog(JSON.stringify(msg));
     };
 
     function updateMetrics(d) {
-      if (d.equity) document.getElementById('equity').textContent =
-        '$' + Number(d.equity).toLocaleString();
-      if (d.sharpe) document.getElementById('sharpe').textContent =
-        Number(d.sharpe).toFixed(2);
-      if (d.drawdown) document.getElementById('drawdown').textContent =
-        (Number(d.drawdown) * 100).toFixed(1) + '%';
-      if (d.regime) document.getElementById('regime').textContent = d.regime;
-      if (d.var) document.getElementById('var').textContent =
-        (Number(d.var) * 100).toFixed(2) + '%';
+      if (d.equity !== undefined && d.equity !== null)
+        document.getElementById('equity').textContent =
+          '$' + Number(d.equity).toLocaleString();
+      if (d.sharpe !== undefined && d.sharpe !== null)
+        document.getElementById('sharpe').textContent =
+          Number(d.sharpe).toFixed(2);
+      if (d.drawdown !== undefined && d.drawdown !== null)
+        document.getElementById('drawdown').textContent =
+          (Number(d.drawdown) * 100).toFixed(1) + '%';
+      if (d.regime !== undefined && d.regime !== null)
+        document.getElementById('regime').textContent = d.regime;
+      if (d.var !== undefined && d.var !== null)
+        document.getElementById('var').textContent =
+          (Number(d.var) * 100).toFixed(2) + '%';
     }
 
     function addLog(msg) {

@@ -4,15 +4,23 @@ Runs alongside the A2A server. Provides endpoints for:
 - /api/run-analysis — run full pipeline, return all data for visualization
 - /api/strategies — list available strategies
 - /api/stress-test — run stress scenario
+
+Security:
+- CORS restricted to ALLOWED_ORIGINS env var (default: http://localhost:3000)
+- Optional API key via API_KEY env var (skipped if not set = dev mode)
 """
 
 from __future__ import annotations
 
+import os
+import re
+
 import numpy as np
 import pandas as pd
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel, Field, field_validator
 
 from quantproto.demo.data_loader import generate_prices
 from quantproto.factor_engine import FactorAlphaEngine
@@ -26,26 +34,69 @@ from quantproto.risk.stress import StressTester
 
 app = FastAPI(title="QuantProto Dashboard API", version="0.1.0")
 
+# ── CORS — restricted origins ──────────────────────────────────────────
+_raw_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000")
+ALLOWED_ORIGINS = [o.strip() for o in _raw_origins.split(",") if o.strip()]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=ALLOWED_ORIGINS,
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Content-Type", "X-API-Key"],
 )
+
+# ── Optional API key auth ──────────────────────────────────────────────
+API_KEY = os.getenv("API_KEY")  # None = dev mode (no auth)
+
+
+@app.middleware("http")
+async def api_key_auth(request: Request, call_next):
+    """Validate X-API-Key header if API_KEY env var is set."""
+    if API_KEY is not None:
+        # Skip auth for health, docs, and CORS preflight
+        if request.method == "OPTIONS" or request.url.path in ("/api/health", "/docs", "/openapi.json"):
+            return await call_next(request)
+        key = request.headers.get("X-API-Key")
+        if key != API_KEY:
+            return JSONResponse(status_code=401, content={"detail": "Invalid or missing API key"})
+    return await call_next(request)
+
+
+# ── Request models with validation ────────────────────────────────────
+_TICKER_RE = re.compile(r"^[A-Z0-9]{1,10}$")
 
 
 class AnalysisRequest(BaseModel):
-    tickers: list[str] = ["AAPL", "GOOG", "MSFT", "AMZN", "META"]
-    n_days: int = 504
-    seed: int = 42
-    train_window: int = 60
-    test_window: int = 20
-    lookback: int = 20
+    tickers: list[str] = Field(default=["AAPL", "GOOG", "MSFT", "AMZN", "META"], min_length=1, max_length=20)
+    n_days: int = Field(default=504, ge=10, le=5000)
+    seed: int = Field(default=42, ge=0, le=999999)
+    train_window: int = Field(default=60, ge=5, le=500)
+    test_window: int = Field(default=20, ge=5, le=200)
+    lookback: int = Field(default=20, ge=5, le=200)
+
+    @field_validator("tickers", mode="before")
+    @classmethod
+    def normalise_tickers(cls, v: list[str]) -> list[str]:
+        out = [t.strip().upper() for t in v if t.strip()]
+        if not out:
+            raise ValueError("At least one ticker is required")
+        for t in out:
+            if not _TICKER_RE.match(t):
+                raise ValueError(f"Invalid ticker: {t!r} (1-10 uppercase alphanumeric chars)")
+        return out
 
 
 class StressRequest(BaseModel):
-    scenario: str = "2008_crisis"
-    seed: int = 42
+    scenario: str = Field(default="2008_crisis")
+    seed: int = Field(default=42, ge=0, le=999999)
+
+    @field_validator("scenario")
+    @classmethod
+    def valid_scenario(cls, v: str) -> str:
+        valid = set(StressTester.SCENARIOS.keys())
+        if v not in valid:
+            raise ValueError(f"Unknown scenario: {v!r}. Valid: {sorted(valid)}")
+        return v
 
 
 @app.get("/api/health")
@@ -105,7 +156,6 @@ def run_analysis(req: AnalysisRequest):
     sortino = float(RiskEngine.sortino_ratio(bt_returns))
     var_95 = float(RiskEngine.value_at_risk(bt_returns, 0.95))
     cvar_95 = float(RiskEngine.cvar(bt_returns, 0.95))
-    # mean_return computed but not used in output — removed
 
     # 7. Drawdown analytics
     eq_arr = np.array(equity_values)
