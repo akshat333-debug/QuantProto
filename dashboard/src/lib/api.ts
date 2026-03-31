@@ -3,11 +3,25 @@
 import type { AnalysisData, StressData } from "./types";
 
 /** Run the full analysis pipeline. */
-export async function runAnalysis(tickers: string[], nDays: number, seed: number): Promise<AnalysisData> {
+export async function runAnalysis(opts: {
+    tickers: string[];
+    nDays: number;
+    seed: number;
+    dataSource: "synthetic" | "live";
+    startDate: string;
+    endDate: string;
+}): Promise<AnalysisData> {
     const res = await fetch("/api/run-analysis", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tickers, n_days: nDays, seed }),
+        body: JSON.stringify({
+            tickers: opts.tickers,
+            n_days: opts.nDays,
+            seed: opts.seed,
+            data_source: opts.dataSource,
+            start_date: opts.startDate,
+            end_date: opts.endDate,
+        }),
     });
     if (!res.ok) {
         const errBody = await res.json().catch(() => ({ detail: res.statusText }));

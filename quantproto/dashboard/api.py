@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import os
 import re
+from typing import Literal
 
 import numpy as np
 import pandas as pd
@@ -23,6 +24,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, field_validator
 
 from quantproto.demo.data_loader import generate_prices
+from quantproto.data.fetcher import fetch_prices
 from quantproto.factor_engine import FactorAlphaEngine
 from quantproto.risk_engine import RiskEngine
 from quantproto.walk_forward import WalkForwardBacktester
@@ -73,6 +75,9 @@ class AnalysisRequest(BaseModel):
     train_window: int = Field(default=60, ge=5, le=500)
     test_window: int = Field(default=20, ge=5, le=200)
     lookback: int = Field(default=20, ge=5, le=200)
+    data_source: Literal["synthetic", "live"] = Field(default="synthetic")
+    start_date: str = Field(default="2020-01-01")
+    end_date: str = Field(default="2024-01-01")
 
     @field_validator("tickers", mode="before")
     @classmethod
@@ -84,6 +89,13 @@ class AnalysisRequest(BaseModel):
             if not _TICKER_RE.match(t):
                 raise ValueError(f"Invalid ticker: {t!r} (1-10 uppercase alphanumeric chars)")
         return out
+
+    @field_validator("start_date", "end_date")
+    @classmethod
+    def valid_date(cls, v: str) -> str:
+        if not re.match(r"^\d{4}-\d{2}-\d{2}$", v):
+            raise ValueError(f"Invalid date format: {v!r} (expected YYYY-MM-DD)")
+        return v
 
 
 class StressRequest(BaseModel):
@@ -108,8 +120,13 @@ def health():
 def run_analysis(req: AnalysisRequest):
     """Run the full QuantProto pipeline and return all data for the dashboard."""
 
-    # 1. Generate prices
-    prices = generate_prices(req.tickers, n_days=req.n_days, seed=req.seed)
+    # 1. Get prices (live from Yahoo Finance or synthetic)
+    if req.data_source == "live":
+        prices = fetch_prices(req.tickers, start=req.start_date, end=req.end_date)
+        if prices.empty:
+            raise HTTPException(status_code=400, detail="No data returned for the given tickers/date range. Check ticker symbols and dates.")
+    else:
+        prices = generate_prices(req.tickers, n_days=req.n_days, seed=req.seed)
     returns = prices.pct_change().dropna()
 
     # 2. Factor signals

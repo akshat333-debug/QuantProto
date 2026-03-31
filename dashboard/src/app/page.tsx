@@ -40,6 +40,9 @@ export default function Dashboard() {
     const [tickers, setTickers] = useState("AAPL,GOOG,MSFT,AMZN,META");
     const [nDays, setNDays] = useState(504);
     const [seed, setSeed] = useState(42);
+    const [dataSource, setDataSource] = useState<"synthetic" | "live">("synthetic");
+    const [startDate, setStartDate] = useState("2020-01-01");
+    const [endDate, setEndDate] = useState("2024-01-01");
 
     // Fetch available scenarios
     useEffect(() => {
@@ -54,12 +57,12 @@ export default function Dashboard() {
         if (!isValid) return;
         setLoading(true); setError(null);
         try {
-            const json = await apiRunAnalysis(tickerList, nDays, seed);
+            const json = await apiRunAnalysis({ tickers: tickerList, nDays, seed, dataSource, startDate, endDate });
             setData(json); setActiveTab("overview");
         } catch (e) {
             setError(`Analysis failed: ${e instanceof Error ? e.message : "Unknown error"}. Check that the API server is running on port 9000.`);
         } finally { setLoading(false); }
-    }, [isValid, tickerList, nDays, seed]);
+    }, [isValid, tickerList, nDays, seed, dataSource, startDate, endDate]);
 
     const runStress = useCallback(async () => {
         setStressLoading(true); setError(null);
@@ -87,15 +90,41 @@ export default function Dashboard() {
                 {/* Config Bar */}
                 <div className="bg-white dark:bg-[#0F0F12] rounded-xl border border-gray-200 dark:border-[#1F1F23] p-4 mb-6">
                     <div className="flex flex-wrap items-end gap-4">
+                        {/* Data source toggle */}
+                        <div className="w-36">
+                            <label htmlFor="input-source" className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1 block">Data Source</label>
+                            <select
+                                id="input-source"
+                                value={dataSource}
+                                onChange={(e) => setDataSource(e.target.value as "synthetic" | "live")}
+                                className="w-full h-10 px-3 rounded-lg bg-gray-50 dark:bg-[#1A1A1E] border border-gray-200 dark:border-[#2A2A2E] text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                            >
+                                <option value="synthetic">Synthetic</option>
+                                <option value="live">Live (Yahoo)</option>
+                            </select>
+                        </div>
                         <div className="flex-1 min-w-[200px]">
                             <label htmlFor="input-tickers" className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1 block">Tickers</label>
                             <input id="input-tickers" value={tickers} onChange={(e) => setTickers(e.target.value)} className="w-full h-10 px-3 rounded-lg bg-gray-50 dark:bg-[#1A1A1E] border border-gray-200 dark:border-[#2A2A2E] text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50" placeholder="AAPL,GOOG,MSFT" />
                             {tickerList.length === 0 && tickers.length > 0 && <p className="text-xs text-red-400 mt-1">Enter at least one valid ticker</p>}
                         </div>
-                        <div className="w-32">
-                            <label htmlFor="input-days" className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1 block">Days</label>
-                            <input id="input-days" type="number" value={nDays} min={10} max={5000} onChange={(e) => setNDays(Math.max(10, Math.min(5000, Number(e.target.value) || 10)))} className="w-full h-10 px-3 rounded-lg bg-gray-50 dark:bg-[#1A1A1E] border border-gray-200 dark:border-[#2A2A2E] text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50" />
-                        </div>
+                        {dataSource === "synthetic" ? (
+                            <div className="w-32">
+                                <label htmlFor="input-days" className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1 block">Days</label>
+                                <input id="input-days" type="number" value={nDays} min={10} max={5000} onChange={(e) => setNDays(Math.max(10, Math.min(5000, Number(e.target.value) || 10)))} className="w-full h-10 px-3 rounded-lg bg-gray-50 dark:bg-[#1A1A1E] border border-gray-200 dark:border-[#2A2A2E] text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50" />
+                            </div>
+                        ) : (
+                            <>
+                                <div className="w-36">
+                                    <label htmlFor="input-start" className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1 block">Start Date</label>
+                                    <input id="input-start" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="w-full h-10 px-3 rounded-lg bg-gray-50 dark:bg-[#1A1A1E] border border-gray-200 dark:border-[#2A2A2E] text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50" />
+                                </div>
+                                <div className="w-36">
+                                    <label htmlFor="input-end" className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1 block">End Date</label>
+                                    <input id="input-end" type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="w-full h-10 px-3 rounded-lg bg-gray-50 dark:bg-[#1A1A1E] border border-gray-200 dark:border-[#2A2A2E] text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50" />
+                                </div>
+                            </>
+                        )}
                         <div className="w-24">
                             <label htmlFor="input-seed" className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1 block">Seed</label>
                             <input id="input-seed" type="number" value={seed} min={0} max={999999} onChange={(e) => setSeed(Math.max(0, Math.min(999999, Number(e.target.value) || 0)))} className="w-full h-10 px-3 rounded-lg bg-gray-50 dark:bg-[#1A1A1E] border border-gray-200 dark:border-[#2A2A2E] text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50" />

@@ -1,21 +1,22 @@
 # QuantProto — Roadmap
 
-## Phase 1: Housekeeping & Ship ⬅️ CURRENT
+## Phase 1: Housekeeping & Ship ✅ DONE
 > Commit pending audit fixes, create root README, push to GitHub
 
-- [ ] Commit + push all uncommitted audit fixes (8 modified + 1 new)
-- [ ] Create comprehensive root `README.md`
-- [ ] Update `.gitignore` for dashboard artifacts (`.next/`, `node_modules/`, `.env.local`)
+- [x] Commit + push all uncommitted audit fixes (8 modified + 1 new)
+- [x] Create comprehensive root `README.md`
+- [x] Update `.gitignore` for dashboard artifacts (`.next/`, `node_modules/`, `.env.local`)
 
 ---
 
-## Phase 2: Dashboard Decomposition
+## Phase 2: Dashboard Decomposition ✅ DONE
 > Break monolithic page.tsx into testable components
 
-- [ ] Extract `MetricCard`, `DecisionBadge`, `ErrorBanner`, `ChartTooltip` → `src/components/`
-- [ ] Extract tab panels → `src/components/tabs/` (OverviewTab, PerformanceTab, etc.)
-- [ ] Extract API calls → `src/lib/api.ts`
-- [ ] Extract types → `src/lib/types.ts`
+- [x] Extract `MetricCard`, `DecisionBadge`, `ErrorBanner`, `ChartTooltip` → `src/components/ui/`
+- [x] Extract tab panels → `src/components/tabs/` (OverviewTab, PerformanceTab, etc.)
+- [x] Extract API calls → `src/lib/api.ts`
+- [x] Extract types → `src/lib/types.ts`
+- [x] `ThemeToggle` → `src/components/ui/ThemeToggle.tsx`
 - [ ] Install jest + testing-library, wire up test runner
 - [ ] Write unit tests for each extracted component
 

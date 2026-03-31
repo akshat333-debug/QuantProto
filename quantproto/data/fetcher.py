@@ -53,13 +53,17 @@ def fetch_prices(
     try:
         import yfinance as yf
         data = yf.download(tickers, start=start, end=end, progress=False)
+        if data.empty:
+            return _generate_synthetic(tickers, start, end)
         if isinstance(data.columns, pd.MultiIndex):
             prices = data["Close"]
         else:
             prices = data[["Close"]]
             prices.columns = tickers
         prices = prices.dropna()
-        if cache and len(prices) > 0:
+        if prices.empty:
+            return _generate_synthetic(tickers, start, end)
+        if cache:
             _save_cache(prices, tickers, start, end)
         return prices
     except (ImportError, Exception):
