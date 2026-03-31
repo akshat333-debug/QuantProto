@@ -12,6 +12,7 @@ import { RiskTab } from "@/components/tabs/RiskTab";
 import { RegimeTab } from "@/components/tabs/RegimeTab";
 import { PortfolioTab } from "@/components/tabs/PortfolioTab";
 import { StressTestTab } from "@/components/tabs/StressTestTab";
+import { ChatPanel } from "@/components/ui/ChatPanel";
 
 /* ─── Tab definitions ─────────────────────────────────────────── */
 
@@ -174,6 +175,9 @@ export default function Dashboard() {
                     </>
                 )}
             </div>
+
+            {/* Floating AI Chat */}
+            <ChatPanel data={data} />
         </div>
     );
 }

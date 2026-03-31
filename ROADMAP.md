@@ -22,13 +22,14 @@
 
 ---
 
-## Phase 3: Real Market Data
+## Phase 3: Real Market Data ✅ DONE
 > Replace synthetic data with live market data
 
-- [ ] Integrate `yfinance` or Alpha Vantage for real price fetching
-- [ ] Add ticker autocomplete/validation against known universe
-- [ ] Cache fetched data (Redis or local file cache)
-- [ ] Add date range picker to dashboard config bar
+- [x] Integrate `yfinance` for real price fetching (with synthetic fallback)
+- [x] Data source toggle in dashboard UI (Synthetic / Live Yahoo)
+- [x] Local CSV caching (via fetcher.py cache layer)
+- [x] Date range picker in dashboard config bar (Start Date / End Date)
+- [ ] Ticker autocomplete/validation against known universe (deferred)
 
 ---
 

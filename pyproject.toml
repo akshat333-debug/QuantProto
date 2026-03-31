@@ -30,6 +30,9 @@ dev = [
 live = [
     "yfinance>=0.2",
 ]
+ai = [
+    "google-genai>=1.0",
+]
 
 [tool.setuptools.packages.find]
 include = ["quantproto*"]

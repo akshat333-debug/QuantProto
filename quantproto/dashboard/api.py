@@ -33,6 +33,7 @@ from quantproto.analytics import DrawdownAnalytics
 from quantproto.analytics.correlation import CorrelationEngine
 from quantproto.portfolio.optimiser import PortfolioOptimiser
 from quantproto.risk.stress import StressTester
+from quantproto.genai import generate_summary, chat as genai_chat, is_available as genai_available
 
 app = FastAPI(title="QuantProto Dashboard API", version="0.1.0")
 
@@ -308,3 +309,33 @@ def stress_test(req: StressRequest):
 @app.get("/api/scenarios")
 def list_scenarios():
     return {"scenarios": list(StressTester.SCENARIOS.keys())}
+
+
+# ── GenAI endpoints ───────────────────────────────────────────────────
+
+class SummaryRequest(BaseModel):
+    analysis_data: dict
+
+class ChatRequest(BaseModel):
+    question: str = Field(min_length=1, max_length=2000)
+    analysis_data: dict | None = None
+
+
+@app.get("/api/ai/status")
+def ai_status():
+    """Check if GenAI (Gemini) is available."""
+    return {"available": genai_available()}
+
+
+@app.post("/api/ai/summary")
+def ai_summary(req: SummaryRequest):
+    """Generate an AI executive summary of analysis results."""
+    text = generate_summary(req.analysis_data)
+    return {"summary": text, "ai_powered": genai_available()}
+
+
+@app.post("/api/ai/chat")
+def ai_chat(req: ChatRequest):
+    """Chat with AI about analysis results."""
+    response = genai_chat(req.question, req.analysis_data)
+    return {"response": response, "ai_powered": genai_available()}

@@ -4,6 +4,7 @@ import type { AnalysisData } from "@/lib/types";
 import { MetricCard } from "@/components/ui/MetricCard";
 import { DecisionBadge } from "@/components/ui/DecisionBadge";
 import { ChartTooltip } from "@/components/ui/ChartTooltip";
+import { AISummary } from "@/components/ui/AISummary";
 
 export function OverviewTab({ data }: { data: AnalysisData }) {
     return (
@@ -15,6 +16,8 @@ export function OverviewTab({ data }: { data: AnalysisData }) {
                 </span>
             </div>
 
+            {/* AI Executive Summary */}
+            <AISummary data={data} />
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                 <MetricCard label="Total Return" value={`${data.summary.total_return > 0 ? "+" : ""}${data.summary.total_return}%`} icon={TrendingUp} color={data.summary.total_return >= 0 ? "text-emerald-500" : "text-red-500"} />
                 <MetricCard label="Sharpe Ratio" value={data.summary.sharpe.toFixed(2)} sub="Annualised" icon={Target} color={data.summary.sharpe >= 1 ? "text-emerald-500" : data.summary.sharpe >= 0.5 ? "text-amber-500" : "text-red-500"} />
