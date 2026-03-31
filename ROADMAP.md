@@ -33,13 +33,14 @@
 
 ---
 
-## Phase 4: GenAI Integration
+## Phase 4: GenAI Integration ✅ DONE
 > LLM-powered analysis and conversational interface
 
-- [ ] Add Gemini/OpenAI integration for risk narrative generation
-- [ ] Add executive summary auto-generation after analysis
-- [ ] Add conversational chat panel (ask questions about results)
-- [ ] Fallback to mock responses when no API key configured
+- [x] Add Gemini 2.0 Flash integration for risk narrative generation
+- [x] Add executive summary auto-generation after analysis (AISummary component)
+- [x] Add conversational chat panel (floating ChatPanel with suggested questions)
+- [x] Fallback to mock responses when no API key configured
+- [x] API endpoints: `/api/ai/status`, `/api/ai/summary`, `/api/ai/chat`
 
 ---
 

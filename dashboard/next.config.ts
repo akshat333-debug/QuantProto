@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Enable standalone output for Docker production builds
+  output: "standalone",
   // Proxy API calls to the backend so frontend never uses a hardcoded URL
   async rewrites() {
     return [

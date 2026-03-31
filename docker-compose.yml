@@ -1,25 +1,25 @@
-version: "3.9"
-
 services:
-  # ── QuantProto App ──────────────────────────────────────────────────
-  app:
+  # ── API Server (FastAPI) ─────────────────────────────────────────
+  api:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: quantproto-app
+    container_name: quantproto-api
     ports:
-      - "8000:8000"
+      - "9000:9000"
     environment:
       - REDIS_URL=redis://redis:6379/0
       - DATABASE_URL=postgresql://quantproto:quantproto@timescaledb:5432/quantproto
-      - JWT_SECRET=quantproto-dev-secret-change-in-prod
+      - ALLOWED_ORIGINS=http://localhost:3000,http://dashboard:3000
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - API_KEY=${API_KEY:-}
     depends_on:
       timescaledb:
         condition: service_healthy
       redis:
         condition: service_healthy
     healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:8000/health" ]
+      test: ["CMD", "curl", "-f", "http://localhost:9000/api/health"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -28,7 +28,24 @@ services:
       - quantproto-net
     restart: unless-stopped
 
-  # ── TimescaleDB (PostgreSQL) ────────────────────────────────────────
+  # ── Dashboard (Next.js) ──────────────────────────────────────────
+  dashboard:
+    build:
+      context: ./dashboard
+      dockerfile: Dockerfile
+    container_name: quantproto-dashboard
+    ports:
+      - "3000:3000"
+    environment:
+      - API_URL=http://api:9000
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - quantproto-net
+    restart: unless-stopped
+
+  # ── TimescaleDB (PostgreSQL) ────────────────────────────────────
   timescaledb:
     image: timescale/timescaledb:latest-pg15
     container_name: quantproto-timescaledb
@@ -41,7 +58,7 @@ services:
     volumes:
       - timescale-data:/var/lib/postgresql/data
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U quantproto -d quantproto" ]
+      test: ["CMD-SHELL", "pg_isready -U quantproto -d quantproto"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -49,7 +66,7 @@ services:
       - quantproto-net
     restart: unless-stopped
 
-  # ── Redis ───────────────────────────────────────────────────────────
+  # ── Redis ───────────────────────────────────────────────────────
   redis:
     image: redis:7-alpine
     container_name: quantproto-redis
@@ -58,7 +75,7 @@ services:
     volumes:
       - redis-data:/data
     healthcheck:
-      test: [ "CMD", "redis-cli", "ping" ]
+      test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -66,14 +83,14 @@ services:
       - quantproto-net
     restart: unless-stopped
 
-# ── Volumes ─────────────────────────────────────────────────────────
+# ── Volumes ─────────────────────────────────────────────────────
 volumes:
   timescale-data:
     driver: local
   redis-data:
     driver: local
 
-# ── Networks ────────────────────────────────────────────────────────
+# ── Networks ────────────────────────────────────────────────────
 networks:
   quantproto-net:
     driver: bridge
