@@ -44,14 +44,16 @@
 
 ---
 
-## Phase 5: CI/CD & Production Readiness
+## Phase 5: CI/CD & Production Readiness ✅ DONE
 > Automated testing + deployment pipeline
 
-- [ ] GitHub Actions: lint + test + build on PR
-- [ ] Add Playwright E2E tests for critical dashboard flows
-- [ ] Add database migration layer (Alembic + SQLAlchemy)
-- [ ] Production Docker build for dashboard
-- [ ] Staging/preview deploy (Vercel or Railway)
+- [x] GitHub Actions: lint + test + build on push/PR (Python 3.11+3.12, Node 22)
+- [x] Production Docker build for dashboard (multi-stage standalone)
+- [x] Production Docker build for backend API (multi-stage slim)
+- [x] docker-compose.yml: 4 services (api, dashboard, timescaledb, redis)
+- [x] .dockerignore files for both contexts
+- [ ] Playwright E2E tests (deferred)
+- [ ] Database migration layer — Alembic + SQLAlchemy (deferred)
 
 ---
 

@@ -79,6 +79,7 @@ class AnalysisRequest(BaseModel):
     data_source: Literal["synthetic", "live"] = Field(default="synthetic")
     start_date: str = Field(default="2020-01-01")
     end_date: str = Field(default="2024-01-01")
+    factor_weights: dict[str, float] | None = Field(default=None, description="Factor weights: {momentum, mean_reversion, volatility}")
 
     @field_validator("tickers", mode="before")
     @classmethod
@@ -141,7 +142,7 @@ def run_analysis(req: AnalysisRequest):
         "mean_reversion": mean_rev,
         "volatility": volatility,
     }
-    composite = engine.composite_signal(factors)
+    composite = engine.composite_signal(factors, weights=req.factor_weights)
 
     # 3. Portfolio optimisation
     mu = returns.mean().values * 252

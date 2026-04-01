@@ -10,6 +10,7 @@ export async function runAnalysis(opts: {
     dataSource: "synthetic" | "live";
     startDate: string;
     endDate: string;
+    factorWeights?: Record<string, number>;
 }): Promise<AnalysisData> {
     const res = await fetch("/api/run-analysis", {
         method: "POST",
@@ -21,6 +22,7 @@ export async function runAnalysis(opts: {
             data_source: opts.dataSource,
             start_date: opts.startDate,
             end_date: opts.endDate,
+            factor_weights: opts.factorWeights ?? null,
         }),
     });
     if (!res.ok) {
