@@ -57,11 +57,11 @@
 
 ---
 
-## Phase 6: Advanced Features
+## Phase 6: Advanced Features ✅ DONE
 > Power-user capabilities
 
-- [ ] Export analysis results (PDF report, CSV data download)
-- [ ] Custom strategy builder (UI for defining factor weights)
-- [ ] Alert system (email/webhook on risk gate violations)
-- [ ] Multi-user sessions with saved analysis history
-- [ ] Mobile-responsive dashboard layout
+- [x] Export analysis results (CSV + JSON download)
+- [x] Custom strategy builder (3 factor weight sliders with visual bar)
+- [x] Mobile-responsive dashboard layout (responsive breakpoints throughout)
+- [ ] Alert system — email/webhook on risk gate violations (deferred)
+- [ ] Multi-user sessions with saved analysis history (deferred)
