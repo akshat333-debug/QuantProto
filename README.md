@@ -1,173 +1,157 @@
 # QuantProto
 
-> Reproducible quantitative research engine with alpha generation, risk evaluation, walk-forward backtesting, regime detection, GenAI analysis, and an interactive analytics dashboard.
+> Protocol-native quantitative research engine that exposes reproducible trading workflows — alpha generation, risk evaluation, walk-forward backtesting, regime detection — as MCP tools and orchestrates them via A2A agents with strict risk gating.
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://python.org)
 [![Tests](https://img.shields.io/badge/tests-246%20passing-brightgreen.svg)]()
 [![CI](https://img.shields.io/github/actions/workflow/status/akshat333-debug/QuantProto/ci.yml?label=CI)](https://github.com/akshat333-debug/QuantProto/actions)
-[![License](https://img.shields.io/badge/license-MIT-green.svg)]()
 
 ---
 
-## Overview
+**Not a trading bot. Not a prediction model.**
+This is infrastructure for building reproducible quant research systems — exposing correct methodology through agent protocols.
 
-QuantProto is a full-stack quantitative research platform that combines:
+## What Makes It Different
 
-- **Factor Alpha Engine** — Momentum, mean-reversion, and volatility signals with configurable composite scoring
-- **Walk-Forward Backtester** — Out-of-sample validation with bootstrap Sharpe confidence intervals
-- **HMM Regime Detection** — 3-state (Bull/Neutral/Bear) market regime identification
-- **Risk Engine** — VaR, CVaR, Sharpe, Sortino, Beta, Calmar, pain index + risk gate system
-- **Portfolio Optimisation** — Mean-Variance, Risk Parity, Max Sharpe, Black-Litterman
-- **Stress Testing** — 5 historical crisis scenarios + Monte Carlo simulation
-- **Live Market Data** — Yahoo Finance integration with local CSV caching (synthetic fallback)
-- **GenAI Analysis** — Gemini-powered executive summaries and conversational chat
-- **Interactive Dashboard** — Next.js frontend with 6 tabs, data export, and strategy builder
-- **MCP Tool Interface** — 14 quantitative tools exposed via FastMCP
-- **Agent Orchestration** — A2A agent trio (Alpha → Risk → Decision) with JWT auth
+| Principle | Implementation |
+|-----------|---------------|
+| **No overfitting** | Walk-forward backtester with bootstrap Sharpe confidence intervals — never tests on training data |
+| **Non-stationarity handling** | HMM-based regime detection (Bull/Neutral/Bear) adjusts exposure before execution |
+| **Risk-gated execution** | Threshold-based risk gate (VaR, Sharpe, concentration) — pipeline rejects before it trades |
+| **Agent discoverability** | Core workflows exposed as MCP tools — any agent can discover and invoke them |
+| **Deterministic reproducibility** | Seeded RNG on every stochastic path — same inputs always produce same outputs |
+
+## Architecture
+
+```
+┌─────────────────── A2A Agent Layer ───────────────────┐
+│                                                        │
+│   AlphaAgent ──→ RegimeHMM ──→ Backtester ──→ RiskAgent  │
+│       │              │              │              │   │
+│   composite      3-state HMM    walk-forward    risk   │
+│   signal         exposure adj   out-of-sample   gate   │
+│                                                        │
+│                  Orchestrator                          │
+│              (chains pipeline, enforces gate)           │
+└────────────────────────────────────────────────────────┘
+         ↕ MCP Tools                    ↕ REST API
+┌────────────────────┐       ┌────────────────────────┐
+│  FastMCP Server    │       │  FastAPI Dashboard API  │
+│  (agent-callable)  │       │  (human-facing)         │
+└────────────────────┘       └────────────────────────┘
+```
+
+### Core Pipeline (what the orchestrator does)
+
+1. **Alpha Signal** — Composite of momentum, mean-reversion, and volatility factors (cross-sectional percentile ranking + confidence weighting)
+2. **Regime Detection** — 3-state Hidden Markov Model on engineered features (rolling returns, vol, vol-of-vol) — adjusts exposure per regime
+3. **Walk-Forward Backtest** — Rolling train/test splits, never looks ahead. Bootstrap Sharpe CI quantifies statistical confidence
+4. **Risk Gate** — Evaluates Sharpe, VaR, CVaR, Beta, concentration (HHI) against configurable thresholds. Pipeline halts if gate fails
+5. **Decision** — `PROCEED` or `REJECT` — no blind automation
+
+### MCP Tool Interface
+
+The quant engine is exposed as MCP tools, making workflows agent-discoverable:
+
+| Tool | What it does |
+|------|-------------|
+| `run_backtest` | Walk-forward backtest with configurable windows |
+| `detect_regime` | HMM regime detection with confidence scores |
+| `risk_gate` | Threshold check — go/no-go decision |
+| `compute_composite_signal` | Weighted factor combination with rank-based scoring |
+
+Additional tools expose individual risk metrics (VaR, CVaR, Sharpe, Sortino, Beta, HHI) and factor computations for granular agent workflows. All tools include rate limiting and input sanitization.
+
+### A2A Agent Orchestration
+
+Three agents coordinate via the Orchestrator pattern:
+
+- **AlphaAgent** — Generates composite factor signals from price data
+- **RiskAgent** — Evaluates returns against risk thresholds, produces go/no-go gate
+- **Orchestrator** — Chains the full pipeline: `Alpha → Regime → Backtest → Risk → Decision`
+
+Agents authenticate via JWT. The orchestrator enforces the risk gate — if risk thresholds are violated, the pipeline rejects regardless of alpha signal quality.
 
 ## Quick Start
 
-### Prerequisites
-
-- Python 3.11+
-- Node.js 22+ (for dashboard)
-- Docker (optional, for full stack)
-
-### 1. Install the backend
-
 ```bash
-pip install -e ".[dev,live,ai]"
-```
+# Install
+pip install -e ".[dev]"
 
-### 2. Run the demo CLI
-
-```bash
+# Run the demo pipeline (deterministic, seeded)
 python -m quantproto.demo.run_demo
+
+# Run the full test suite (246 tests)
+pytest
 ```
 
-### 3. Start the API server
+### API + Dashboard (optional)
 
 ```bash
+# Start the API server
 uvicorn quantproto.dashboard.api:app --host 0.0.0.0 --port 9000 --reload
+
+# Start the dashboard (separate terminal)
+cd dashboard && npm install && npm run dev
 ```
 
-### 4. Start the dashboard
-
-```bash
-cd dashboard
-npm install
-npm run dev
-```
-
-Open [http://localhost:3000](http://localhost:3000) — configure tickers, adjust factor weights, click **Run Analysis**, and explore all 6 tabs.
-
-### 5. Run with Docker Compose (full stack)
+### Docker (full stack)
 
 ```bash
 docker compose up -d
+# Starts: API (:9000), Dashboard (:3000), TimescaleDB, Redis
 ```
-
-This starts 4 services: API (`:9000`), Dashboard (`:3000`), TimescaleDB (`:5432`), and Redis (`:6379`).
-
-## Dashboard Features
-
-| Tab | What it shows |
-|-----|---------------|
-| **Overview** | AI executive summary, key metrics (Sharpe, Sortino, VaR, Max DD), equity curve, asset breakdown |
-| **Performance** | Full equity curve + drawdown chart |
-| **Risk** | Correlation heatmap, rolling correlation, PCA variance, risk gate violations |
-| **Regime** | Regime states timeline, confidence chart, regime distribution |
-| **Portfolio** | Pie charts (MV, Risk Parity, Max Sharpe) + allocation comparison |
-| **Stress Test** | Historical crisis scenarios + Monte Carlo simulation paths |
-
-### Additional Features
-
-- **Data Source Toggle** — Switch between synthetic data and live Yahoo Finance data with date range picker
-- **Strategy Builder** — Interactive factor weight sliders (momentum, mean-reversion, volatility) with visual proportion bar
-- **AI Chat** — Floating chat panel for asking questions about your analysis (powered by Gemini or mock fallback)
-- **Export** — Download analysis results as CSV or JSON
-- **Dark/Light Mode** — System-aware theme toggle
-- **Mobile Responsive** — Optimized for all screen sizes
 
 ## Project Structure
 
 ```
 quantproto/
-├── agents/            # A2A agent trio + orchestrator + JWT auth
-├── analytics/         # Drawdown, correlation, PCA analytics
+├── agents/            # A2A: AlphaAgent, RiskAgent, Orchestrator, JWT auth
+├── mcp/               # FastMCP server — tool interface with rate limiting
+├── factor_engine.py   # Factor alpha (momentum, mean-reversion, volatility, composite)
+├── risk_engine.py     # Risk metrics (Sharpe, Sortino, VaR, CVaR, Beta, HHI) + risk gate
+├── regime_model.py    # HMM regime detection (3-state, feature engineering)
+├── walk_forward.py    # Walk-forward backtester + bootstrap Sharpe CI
+├── execution_model.py # Slippage + transaction cost simulation
+├── analytics/         # Drawdown, correlation, PCA
+├── portfolio/         # Optimisation (Mean-Variance, Risk Parity, Max Sharpe, Black-Litterman)
+├── risk/              # Stress testing (5 crisis scenarios + Monte Carlo)
 ├── compliance/        # Audit log (hash-chained) + pre-trade checks
-├── dashboard/         # FastAPI REST API + WebSocket dashboard
-├── data/              # DataFetcher (yfinance + cache), UniverseManager
-├── demo/              # Deterministic demo CLI + data loader
-├── genai/             # Gemini AI integration (summary, chat, mock fallback)
-├── factor_engine.py   # Factor alpha engine (momentum, MR, vol, composite)
-├── mcp/               # FastMCP server (14 tools + rate limiting)
-├── ml/                # ML alpha models + feature store
-├── portfolio/         # Portfolio optimisation (MV, RP, MS, BL)
-├── regime_model.py    # HMM regime detection (3-state)
-├── risk/              # Stress tester (historical + Monte Carlo)
-├── risk_engine.py     # Risk metrics + risk gate
+├── data/              # DataFetcher (yfinance + CSV cache), UniverseManager
 ├── strategy/          # Strategy framework + registry
 ├── trading/           # Paper broker (simulated execution)
-└── walk_forward.py    # Walk-forward backtester + bootstrap CI
+└── dashboard/         # FastAPI REST API
 
-dashboard/             # Next.js 16 frontend
-├── src/app/           # Page orchestrator
-├── src/components/    # Modular UI + tab components
-│   ├── tabs/          # OverviewTab, PerformanceTab, RiskTab, etc.
-│   └── ui/            # MetricCard, ChatPanel, AISummary, ExportPanel, etc.
-├── src/lib/           # API client + shared types
-├── Dockerfile         # Multi-stage production build
-└── next.config.ts     # API proxy + security headers + standalone output
-
+dashboard/             # Next.js frontend (optional visualization layer)
 tests/                 # 246 tests across 18 files
 .github/workflows/     # CI: pytest (Python 3.11+3.12) + tsc + next build
 ```
 
-## API Endpoints
-
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/health` | GET | Health check |
-| `/api/run-analysis` | POST | Run full pipeline (synthetic or live data) |
-| `/api/stress-test` | POST | Run stress test scenario |
-| `/api/scenarios` | GET | List available stress scenarios |
-| `/api/ai/status` | GET | Check if Gemini AI is available |
-| `/api/ai/summary` | POST | Generate AI executive summary |
-| `/api/ai/chat` | POST | Chat about analysis results |
-
 ## Testing
 
+246 tests covering:
+- Factor computation correctness
+- Walk-forward split integrity
+- Bootstrap CI statistical properties
+- Regime model state transitions
+- Risk gate threshold logic
+- Agent orchestration pipeline
+- Execution model slippage accuracy
+- Stress test scenario bounds
+
 ```bash
-# Run all backend tests
-pytest
-
-# Type-check the frontend
-cd dashboard && npx tsc --noEmit
-
-# Production build
-cd dashboard && npm run build
+pytest                              # Full suite
+pytest tests/test_walk_forward.py   # Just backtester
+pytest tests/test_risk.py           # Just risk engine
 ```
 
 ## Environment Variables
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `API_URL` | `http://localhost:9000` | Backend API URL (Next.js proxy, server-side) |
-| `ALLOWED_ORIGINS` | `http://localhost:3000` | CORS allowed origins (comma-separated) |
-| `API_KEY` | *(none)* | Optional API key for auth (disabled if unset) |
-| `GEMINI_API_KEY` | *(none)* | Google Gemini API key for AI features |
-| `REDIS_URL` | `redis://localhost:6379/0` | Redis connection URL |
-| `DATABASE_URL` | *(none)* | TimescaleDB connection URL |
-
-## Optional Dependencies
-
-```bash
-pip install -e ".[dev]"       # pytest, pytest-cov
-pip install -e ".[live]"      # yfinance (live market data)
-pip install -e ".[ai]"        # google-genai (Gemini AI)
-pip install -e ".[dev,live,ai]"  # everything
-```
+| Variable | Description |
+|----------|-------------|
+| `GEMINI_API_KEY` | Optional — enables AI-powered analysis summaries |
+| `ALLOWED_ORIGINS` | CORS origins for API (default: `http://localhost:3000`) |
+| `API_KEY` | Optional API key auth (disabled if unset) |
 
 ## License
 
