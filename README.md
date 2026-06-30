@@ -3,7 +3,7 @@
 > **The backtest-integrity auditor.** Paste any strategy's returns and find out whether its edge is real or an artefact of overfitting — Deflated Sharpe, Probability of Backtest Overfitting, cost break-even, and bias red-flags, distilled into one Robustness Score. Exposed as MCP tools so agents can audit strategies too.
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://python.org)
-[![Tests](https://img.shields.io/badge/tests-322%20passing-brightgreen.svg)]()
+[![Tests](https://img.shields.io/badge/tests-349%20passing-brightgreen.svg)]()
 [![CI](https://img.shields.io/github/actions/workflow/status/akshat333-debug/QuantProto/ci.yml?label=CI)](https://github.com/akshat333-debug/QuantProto/actions)
 
 ---
@@ -37,14 +37,45 @@ Plus an explicit **manual checklist** for the biases that *cannot* be detected f
 pip install -e ".[dev]"
 ```
 
+**From Backtrader:**
+```python
+import backtrader as bt
+from quantproto.adapters import audit_backtrader
+
+cerebro = bt.Cerebro()
+cerebro.addstrategy(MyStrategy)
+cerebro.addanalyzer(bt.analyzers.TimeReturn, _name="time_return")
+result = cerebro.run()
+
+report = audit_backtrader(result, n_trials=50)
+print(report["score"], report["verdict"])   # e.g. 38.0  likely_overfit
+```
+
+**From QuantConnect** (paste your JSON download):
+```python
+import json
+from quantproto.adapters import audit_quantconnect
+
+result = json.load(open("backtest.json"))
+report = audit_quantconnect(result, n_trials=50)
+print(report["statistics"]["breakeven_bps"])    # edge dies above N bps
+```
+
+**From zipline / bt / any equity curve:**
+```python
+from quantproto.adapters import audit_zipline, audit_bt, audit_returns
+
+report = audit_zipline(perf)          # zipline perf DataFrame
+report = audit_bt(bt_result)          # bt.Result object
+report = audit_returns(my_returns)    # plain list / Series / ndarray
+```
+
+**Low-level (full control):**
 ```python
 from quantproto.integrity import robustness_report
 
-# Your strategy's daily returns from any tool:
 report = robustness_report(my_returns, n_trials=50, turnover=0.3)
-
-print(report["score"], report["verdict"])      # e.g. 38.0  likely_overfit
-print(report["statistics"]["breakeven_bps"])    # edge dies above N bps
+print(report["score"], report["verdict"])
 for flag in report["red_flags"]:
     print(flag["severity"], flag["message"])
 ```
@@ -102,12 +133,23 @@ docker compose up -d   # API (:9000), Dashboard (:3000), TimescaleDB, Redis
 
 Audit runs are persisted (hash-chained, tamper-evident) to Postgres/TimescaleDB when `DATABASE_URL` is set, else a local SQLite file — so results are reproducible and queryable (`GET /api/runs`). Rate limiting uses Redis when `REDIS_URL` is set.
 
+## Deploy
+
+See [DEPLOY.md](DEPLOY.md) for the full step-by-step guide.
+
+**TL;DR (5 minutes):**
+1. Deploy the API to Railway: `railway init && railway up`
+2. Set `ALLOWED_ORIGINS` to your Vercel URL in Railway
+3. Import the repo to Vercel, set root dir = `dashboard`, add env var `API_URL=<railway-url>`
+4. Done — anyone can paste returns and get a Robustness Score without installing anything
+
 ## Project structure
 
 ```
 quantproto/
 ├── integrity/         # ★ the auditor: deflated_sharpe, pbo, purged_cv,
 │                      #   cost_sensitivity, bias_checks, score, ingest (BYO)
+├── adapters/          # Framework adapters: Backtrader, QuantConnect, bt, zipline
 ├── agents/            # AlphaAgent, RiskAgent, IntegrityAgent, Orchestrator (JWT A2A)
 ├── mcp/               # FastMCP server — agent-callable tools + rate limiting
 ├── factor_engine.py   # Factor alpha (direction-aware composite)
@@ -120,16 +162,17 @@ quantproto/
 └── dashboard/         # FastAPI REST API (run-analysis, audit, runs, AI summaries)
 
 dashboard/             # Next.js frontend (Integrity tab + bring-your-own auditor)
-tests/                 # 322 tests
+tests/                 # 349 tests
 ```
 
 ## Testing
 
 ```bash
-pytest                                 # full suite (322)
+pytest                                 # full suite (349)
 pytest tests/test_pbo.py               # overfitting detection
 pytest tests/test_deflated_sharpe.py   # DSR / PSR statistics
 pytest tests/test_wiring.py            # guards: components stay connected
+pytest tests/test_adapters.py          # Backtrader / QC / bt / zipline adapters
 ```
 
 The integrity tests are property-based: synthetic overfit data must score `likely_overfit` and yield high PBO; a genuine edge must score `robust` with low PBO; purged folds must have zero leakage.

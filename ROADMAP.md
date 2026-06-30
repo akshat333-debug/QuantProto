@@ -29,15 +29,26 @@
 - Redis-backed rate limiting (in-memory fallback)
 - Next.js dashboard: Integrity Audit tab + bring-your-own panel
 - GitHub Actions CI (Python 3.11+3.12, Node 22) + Docker stack
-- 322 backend tests
+- 349 backend tests
+
+### Framework Adapters ✅
+- Backtrader: `audit_backtrader(cerebro.run(), n_trials=N)` — reads `TimeReturn` analyzer or accepts an equity series
+- QuantConnect: `audit_quantconnect(result_json)` — parses Charts → Strategy Equity → Values path
+- bt (Pmorales): `audit_bt(bt_result)` — reads `.prices` DataFrame
+- zipline / zipline-reloaded: `audit_zipline(perf)` — reads `returns` or `portfolio_value` column
+- `audit_returns()` for plain lists / Series / ndarrays from any source
+
+### Deployment ✅
+- Vercel config (`vercel.json`) for the Next.js frontend
+- Railway config (`railway.json`) + Fly.io config (`fly.toml`) for the FastAPI backend
+- Step-by-step guide (`DEPLOY.md`) covering Railway + Vercel in 5 minutes
 
 ---
 
 ## Next
 
 - [ ] Combinatorial Purged CV (CPCV) for tighter PBO estimates
-- [ ] Importable adapters for Backtrader / QuantConnect result objects
-- [ ] Shareable audit-run permalinks (read from the persisted store)
+- [ ] Shareable audit-run permalinks (static HTML report from `GET /api/runs/{id}/report`)
 - [ ] Haircut Sharpe (Harvey–Liu) alongside the Deflated Sharpe
 - [ ] Playwright E2E tests for the dashboard
 - [ ] Alert webhooks when a saved strategy's robustness degrades

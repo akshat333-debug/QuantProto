@@ -119,6 +119,7 @@ IntegrityAgent (gate) → decision: PROCEED / REJECT
 | Module | Role |
 |--------|------|
 | `quantproto/integrity/` | **Flagship.** Deflated Sharpe, PBO/CSCV, purged CV, cost sweep, red-flags, Robustness Score |
+| `quantproto/adapters/` | Framework adapters: `audit_backtrader`, `audit_quantconnect`, `audit_bt`, `audit_zipline`, `audit_returns` |
 | `quantproto/agents/orchestrator.py` | Chains Alpha→Regime→Backtest→Risk→Integrity gates |
 | `quantproto/walk_forward.py` | Rolling OOS backtest, net of `cost_bps`, returns `avg_turnover` |
 | `quantproto/regime_model.py` | 3-state HMM; `adjust_exposure()` scales positions (BEAR=0.3, NEUTRAL=0.7, BULL=1.0) |
