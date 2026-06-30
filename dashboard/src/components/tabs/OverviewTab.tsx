@@ -9,8 +9,19 @@ import { AISummary } from "@/components/ui/AISummary";
 export function OverviewTab({ data }: { data: AnalysisData }) {
     return (
         <div role="tabpanel" id="panel-overview" aria-labelledby="tab-overview" className="space-y-6">
-            <div className="flex items-center gap-4 mb-2">
+            <div className="flex flex-wrap items-center gap-4 mb-2">
                 <DecisionBadge action={data.summary.action} passed={data.summary.gate_passed} />
+                {data.summary.robustness_score != null && (
+                    <span className={`text-xs font-semibold px-3 py-1.5 rounded-lg border ${
+                        data.summary.robustness_verdict === "robust" ? "text-emerald-400 bg-emerald-500/10 border-emerald-500/30"
+                        : data.summary.robustness_verdict === "fragile" ? "text-amber-400 bg-amber-500/10 border-amber-500/30"
+                        : "text-red-400 bg-red-500/10 border-red-500/30"}`}>
+                        Robustness {data.summary.robustness_score}/100 · {(data.summary.robustness_verdict || "").replace("_", " ")}
+                    </span>
+                )}
+                {data.data_source_used && (
+                    <span className="text-xs text-gray-500 dark:text-gray-400">Data: {data.data_source_used}</span>
+                )}
                 <span className="text-sm text-gray-500 dark:text-gray-400">
                     Sharpe 95% CI: [{data.summary.bootstrap_ci.lower}, {data.summary.bootstrap_ci.upper}]
                 </span>

@@ -19,6 +19,14 @@ from quantproto.factor_engine import FactorAlphaEngine
 from quantproto.risk_engine import RiskEngine
 from quantproto.walk_forward import WalkForwardBacktester
 from quantproto.regime_model import RegimeHMM
+from quantproto.integrity.deflated_sharpe import (
+    probabilistic_sharpe_ratio,
+    deflated_sharpe_ratio,
+    _sample_stats,
+)
+from quantproto.integrity.pbo import pbo_cscv
+from quantproto.integrity.cost_sensitivity import cost_sensitivity_sweep
+from quantproto.integrity.score import robustness_report
 from quantproto.mcp.sanitize import (
     validate_prices_input,
     validate_returns_input,
@@ -26,11 +34,12 @@ from quantproto.mcp.sanitize import (
     validate_confidence,
     validate_weights,
 )
-from quantproto.mcp.rate_limit import RateLimiter
+from quantproto.mcp.rate_limit import build_rate_limiter
 from quantproto.logging_config import get_logger
 
 logger = get_logger("mcp.server")
-rate_limiter = RateLimiter(max_tokens=60, refill_rate=1.0)
+# Redis-backed when REDIS_URL is set and reachable; in-memory otherwise.
+rate_limiter = build_rate_limiter(max_tokens=60, refill_rate=1.0)
 
 mcp = FastMCP("QuantProto")
 
@@ -313,6 +322,109 @@ def detect_regime(
         "states": states.tolist(),
         "confidence": confidence.tolist(),
     }
+
+
+# ══════════════════════════════════════════════════════════════════════
+# INTEGRITY / OVERFITTING-AUDIT TOOLS (the flagship — agent-callable)
+# ══════════════════════════════════════════════════════════════════════
+
+@mcp.tool()
+def probabilistic_sharpe(
+    returns: list[float],
+    sharpe_benchmark: float = 0.0,
+) -> dict[str, Any]:
+    """Probability the *true* (per-period) Sharpe exceeds a benchmark.
+
+    Corrects for sample length and non-normality (skew/kurtosis).
+    """
+    rate_limiter.consume()
+    start = time.time()
+    validate_returns_input(returns)
+    sr, g3, g4, n = _sample_stats(np.array(returns))
+    psr = probabilistic_sharpe_ratio(sr, n, g3, g4, sharpe_benchmark)
+    _log_tool_call("probabilistic_sharpe", start)
+    return {"psr": psr, "sharpe_per_period": sr, "skew": g3, "kurtosis": g4, "n": n}
+
+
+@mcp.tool()
+def deflated_sharpe(
+    returns: list[float],
+    n_trials: int = 1,
+    var_sharpe: float = 0.0,
+) -> dict[str, Any]:
+    """Deflated Sharpe Ratio — PSR corrected for multiple-testing selection bias.
+
+    ``n_trials`` = how many strategy configurations were tried; ``var_sharpe`` =
+    variance of their Sharpe ratios. A low value means the Sharpe is plausibly
+    the best of many lucky tries.
+    """
+    rate_limiter.consume()
+    start = time.time()
+    validate_returns_input(returns)
+    validate_positive_int(n_trials, "n_trials", max_val=1_000_000)
+    sr, g3, g4, n = _sample_stats(np.array(returns))
+    res = deflated_sharpe_ratio(sr, n, n_trials, var_sharpe, g3, g4)
+    _log_tool_call("deflated_sharpe", start)
+    return res
+
+
+@mcp.tool()
+def prob_backtest_overfit(
+    perf_matrix: list[list[float]],
+    n_splits: int = 16,
+) -> dict[str, Any]:
+    """Probability of Backtest Overfitting via CSCV.
+
+    ``perf_matrix`` is rows = time, columns = strategy configurations (≥ 2).
+    Returns the PBO, OOS performance degradation, and P(OOS loss).
+    """
+    rate_limiter.consume()
+    start = time.time()
+    matrix = np.asarray(perf_matrix, dtype=float)
+    result = pbo_cscv(matrix, n_splits=n_splits)
+    _log_tool_call("prob_backtest_overfit", start)
+    # Drop the (potentially large) raw logit list from the tool response.
+    return {k: v for k, v in result.items() if k != "logits"}
+
+
+@mcp.tool()
+def cost_sensitivity(
+    returns: list[float],
+    turnover: float = 1.0,
+) -> dict[str, Any]:
+    """Transaction-cost sensitivity: net Sharpe across a cost grid + break-even bps."""
+    rate_limiter.consume()
+    start = time.time()
+    validate_returns_input(returns)
+    result = cost_sensitivity_sweep(np.array(returns), turnover=turnover)
+    _log_tool_call("cost_sensitivity", start)
+    return result
+
+
+@mcp.tool()
+def robustness_audit(
+    returns: list[float],
+    n_trials: int = 1,
+    turnover: float = 1.0,
+    variant_matrix: list[list[float]] | None = None,
+) -> dict[str, Any]:
+    """All-in-one overfitting audit → Robustness Score (0–100) + verdict.
+
+    Works on any backtest. Supply ``returns`` (required) and optionally a
+    ``variant_matrix`` (time × configurations) to also compute PBO. Returns the
+    full report: score, verdict, component breakdown, statistics, red flags, and
+    the manual integrity checklist.
+    """
+    rate_limiter.consume()
+    start = time.time()
+    validate_returns_input(returns)
+    validate_positive_int(n_trials, "n_trials", max_val=1_000_000)
+    vm = np.asarray(variant_matrix, dtype=float) if variant_matrix is not None else None
+    report = robustness_report(
+        np.array(returns), n_trials=n_trials, turnover=turnover, variant_matrix=vm,
+    )
+    _log_tool_call("robustness_audit", start)
+    return report
 
 
 # ── Entry point ───────────────────────────────────────────────────────

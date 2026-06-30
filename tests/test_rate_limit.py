@@ -4,7 +4,22 @@ import time
 
 import pytest
 
-from quantproto.mcp.rate_limit import RateLimiter, RateLimitError
+from quantproto.mcp.rate_limit import RateLimiter, RateLimitError, build_rate_limiter
+
+
+class TestBuildRateLimiter:
+    def test_falls_back_to_in_memory(self, monkeypatch):
+        # No REDIS_URL → in-memory token bucket.
+        monkeypatch.delenv("REDIS_URL", raising=False)
+        rl = build_rate_limiter(max_tokens=5, refill_rate=1.0)
+        assert isinstance(rl, RateLimiter)
+
+    def test_unreachable_redis_falls_back(self, monkeypatch):
+        # REDIS_URL set but unreachable → graceful fallback, no crash.
+        monkeypatch.setenv("REDIS_URL", "redis://127.0.0.1:6390/0")
+        rl = build_rate_limiter(max_tokens=5, refill_rate=1.0)
+        assert isinstance(rl, RateLimiter)
+        rl.consume()
 
 
 class TestRateLimiter:

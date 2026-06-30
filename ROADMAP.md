@@ -2,31 +2,42 @@
 
 ## Completed
 
-### Core Engine ✅
-- Walk-forward backtester with bootstrap Sharpe CI
-- HMM regime detection (3-state: Bull/Neutral/Bear)
-- Factor alpha engine (momentum, mean-reversion, volatility, composite)
-- Risk gate system (VaR, Sharpe, concentration thresholds)
-- Execution model (slippage + transaction costs)
-- 246 backend tests
+### Backtest-Integrity Auditor ✅ (the flagship)
+- Probabilistic & Deflated Sharpe Ratio (sample length, non-normality, multiple-testing)
+- Probability of Backtest Overfitting via CSCV
+- Purged & embargoed K-fold cross-validation (leak-free OOS)
+- Transaction-cost sensitivity sweep + break-even bps
+- Statistical red-flag detection + manual integrity checklist
+- Robustness Score (0–100) with robust / fragile / likely-overfit verdict
+- Bring-your-own-backtest ingestion (returns / equity / trades / variant matrix)
+
+### Engine — fully wired & honest ✅
+- Walk-forward backtester now **net of transaction costs**
+- HMM regime detection now **actually scales exposure** (no lookahead)
+- Composite signal direction-corrected (factors no longer cancel)
+- Live data **fails loud** instead of silently faking it
+- Integrity gate folded into the orchestrator decision
+- Regression tests guarantee components stay connected (`test_wiring.py`)
 
 ### Protocol Layer ✅
-- MCP tool interface via FastMCP (rate limiting, input sanitization)
-- A2A agent trio (AlphaAgent → RiskAgent → Orchestrator)
-- JWT-based agent authentication
+- Integrity audit exposed as MCP tools (`robustness_audit`, `prob_backtest_overfit`, …)
+- A2A agent trio: Alpha → Risk → **Integrity** → Orchestrator (JWT auth)
 - Deterministic seeding on all stochastic paths
 
 ### Infrastructure ✅
-- Dashboard decomposition (modular components)
-- Live market data (yfinance + CSV cache + synthetic fallback)
-- GitHub Actions CI (Python 3.11+3.12, Node 22)
-- Docker production builds (API + Dashboard + TimescaleDB + Redis)
+- Durable, hash-chained audit-run store (SQLite default, Postgres/TimescaleDB via `DATABASE_URL`)
+- Redis-backed rate limiting (in-memory fallback)
+- Next.js dashboard: Integrity Audit tab + bring-your-own panel
+- GitHub Actions CI (Python 3.11+3.12, Node 22) + Docker stack
+- 322 backend tests
 
 ---
 
-## Deferred
+## Next
 
-- [ ] Playwright E2E tests
-- [ ] Database migration layer (Alembic + SQLAlchemy)
-- [ ] Ticker autocomplete against known universe
-- [ ] Alert webhooks on risk gate violations
+- [ ] Combinatorial Purged CV (CPCV) for tighter PBO estimates
+- [ ] Importable adapters for Backtrader / QuantConnect result objects
+- [ ] Shareable audit-run permalinks (read from the persisted store)
+- [ ] Haircut Sharpe (Harvey–Liu) alongside the Deflated Sharpe
+- [ ] Playwright E2E tests for the dashboard
+- [ ] Alert webhooks when a saved strategy's robustness degrades

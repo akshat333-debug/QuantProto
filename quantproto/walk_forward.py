@@ -71,6 +71,7 @@ class WalkForwardBacktester:
         signal_fn: Callable[[pd.DataFrame], pd.DataFrame],
         train_window: int = 60,
         test_window: int = 20,
+        cost_bps: float = 0.0,
     ) -> dict:
         """Execute walk-forward backtest.
 
@@ -82,6 +83,10 @@ class WalkForwardBacktester:
             to generate positions for the test period.
         train_window : number of periods in each training window.
         test_window : number of periods in each test window.
+        cost_bps : round-trip transaction cost in basis points, charged on the
+            traded notional at each rebalance (turnover × cost_bps / 10_000).
+            Default 0.0 keeps the frictionless behaviour; the orchestrator and
+            dashboard pass a realistic value so the equity curve is net of costs.
 
         Returns
         -------
@@ -90,6 +95,8 @@ class WalkForwardBacktester:
             "equity_curve": pd.Series starting at 1.0,
             "n_splits": int,
             "splits": list of split tuples,
+            "avg_turnover": float — mean one-way turnover per rebalance,
+            "total_cost": float — cumulative cost drag (return units),
         }
         """
         returns = prices.pct_change().dropna()
@@ -98,6 +105,10 @@ class WalkForwardBacktester:
 
         all_test_returns: list[float] = []
         test_dates: list = []
+        n_assets = prices.shape[1]
+        prev_weights = np.zeros(n_assets)
+        turnovers: list[float] = []
+        total_cost = 0.0
 
         for train_start, train_end, test_start, test_end in splits:
             # Train: generate signal (no future data)
@@ -110,15 +121,29 @@ class WalkForwardBacktester:
             else:
                 weights = np.array([signal.iloc[-1]])
 
-            # Normalise weights to sum to 1
+            # Cap gross leverage at 1 but allow partial investment: a signal
+            # whose weights sum to < 1 holds the remainder in cash. This is
+            # what lets regime exposure-scaling actually reduce risk — forcing
+            # full investment every period would divide any uniform scale back
+            # out (the original reason regime detection had no effect).
             weight_sum = np.sum(np.abs(weights))
-            if weight_sum > 0:
+            if weight_sum > 1.0:
                 weights = weights / weight_sum
+
+            # Rebalance cost: charge for the notional traded vs. prior weights.
+            traded = float(np.sum(np.abs(weights - prev_weights)))
+            turnovers.append(traded / 2.0)  # one-way turnover
+            rebalance_cost = traded * cost_bps / 10_000.0
+            prev_weights = weights
 
             # Test: compute portfolio return for each test day
             test_rets = returns.iloc[test_start:test_end]
             for idx in range(len(test_rets)):
                 daily_port_ret = float(np.dot(weights, test_rets.iloc[idx].values))
+                if idx == 0 and cost_bps > 0:
+                    # Charge the rebalance cost on the first day of the window.
+                    daily_port_ret -= rebalance_cost
+                    total_cost += rebalance_cost
                 all_test_returns.append(daily_port_ret)
                 test_dates.append(test_rets.index[idx])
 
@@ -130,6 +155,8 @@ class WalkForwardBacktester:
             "equity_curve": eq_curve,
             "n_splits": len(splits),
             "splits": splits,
+            "avg_turnover": float(np.mean(turnovers)) if turnovers else 0.0,
+            "total_cost": total_cost,
         }
 
     # ------------------------------------------------------------------

@@ -14,6 +14,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import logging
 import os
 import random
 import sys
@@ -23,6 +24,10 @@ import numpy as np
 import matplotlib
 matplotlib.use("Agg")  # non-interactive backend
 import matplotlib.pyplot as plt
+
+# The walk-forward pipeline refits the HMM on many small expanding windows;
+# its convergence chatter is benign and would otherwise drown the CLI output.
+logging.getLogger("hmmlearn").setLevel(logging.ERROR)
 
 from quantproto.demo.data_loader import load_universe, generate_prices
 from quantproto.agents.orchestrator import Orchestrator
@@ -76,14 +81,23 @@ def run_demo(seed: int = 42, output_dir: str = "output") -> dict:
 
     # 5. Save backtest.json
     backtest_path = os.path.join(output_dir, "backtest.json")
+    integrity = result.get("integrity")
     backtest_data = {
         "seed": seed,
         "universe": universe,
         "action": result["action"],
         "n_splits": result["backtest"]["n_splits"],
+        "avg_turnover": result["backtest"].get("avg_turnover"),
+        "cost_bps": result["backtest"].get("cost_bps"),
         "bootstrap_ci": result["backtest"]["bootstrap_ci"],
         "risk_report": result["risk_report"],
         "gate": result["gate"],
+        "integrity": None if integrity is None else {
+            "score": integrity["score"],
+            "verdict": integrity["verdict"],
+            "headline": integrity["headline"],
+            "statistics": integrity["statistics"],
+        },
     }
     with open(backtest_path, "w") as f:
         json.dump(backtest_data, f, indent=2, default=_json_serializer)
@@ -146,8 +160,13 @@ def main():
 
     print(f"Running QuantProto demo with seed={args.seed}...")
     result = run_demo(seed=args.seed, output_dir=args.output_dir)
-    print(f"Action: {result['result']['action']}")
-    print(f"Sharpe CI: {result['result']['bootstrap_ci']}")
+    res = result["result"]
+    print(f"Action: {res['action']}")
+    print(f"Sharpe CI: {res['bootstrap_ci']}")
+    integ = res.get("integrity")
+    if integ:
+        print(f"Robustness: {integ['score']}/100 — {integ['verdict']} "
+              f"({integ['headline']})")
     print(f"Files saved to: {args.output_dir}/")
     print(f"  - backtest.json")
     print(f"  - equity_curve.png")

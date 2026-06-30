@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { TrendingUp, RefreshCw, BarChart3, Activity, Shield, GitBranch, Zap } from "lucide-react";
+import { TrendingUp, RefreshCw, BarChart3, Activity, Shield, GitBranch, Zap, Crosshair } from "lucide-react";
 import type { AnalysisData, StressData } from "@/lib/types";
 import { runAnalysis as apiRunAnalysis, runStressTest as apiRunStress, fetchScenarios } from "@/lib/api";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
@@ -14,12 +14,14 @@ import { RiskTab } from "@/components/tabs/RiskTab";
 import { RegimeTab } from "@/components/tabs/RegimeTab";
 import { PortfolioTab } from "@/components/tabs/PortfolioTab";
 import { StressTestTab } from "@/components/tabs/StressTestTab";
+import { IntegrityTab } from "@/components/tabs/IntegrityTab";
 import { ChatPanel } from "@/components/ui/ChatPanel";
 
 /* ─── Tab definitions ─────────────────────────────────────────── */
 
 const TABS = [
     { id: "overview", label: "Overview", icon: Activity },
+    { id: "integrity", label: "Integrity Audit", icon: Crosshair },
     { id: "equity", label: "Performance", icon: TrendingUp },
     { id: "risk", label: "Risk", icon: Shield },
     { id: "regime", label: "Regime", icon: GitBranch },
@@ -157,17 +159,21 @@ export default function Dashboard() {
                 {error && <ErrorBanner message={error} onDismiss={() => setError(null)} />}
 
                 {!data ? (
-                    <div className="flex items-center justify-center h-[50vh] sm:h-[60vh]">
-                        <div className="text-center px-4">
-                            <div className="w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-4 sm:mb-6 rounded-2xl bg-gradient-to-br from-blue-600/20 to-purple-600/20 flex items-center justify-center">
-                                <BarChart3 className="w-8 h-8 sm:w-10 sm:h-10 text-blue-500" />
+                    <>
+                        <div className="flex items-center justify-center py-10 sm:py-14">
+                            <div className="text-center px-4">
+                                <div className="w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-4 sm:mb-6 rounded-2xl bg-gradient-to-br from-blue-600/20 to-purple-600/20 flex items-center justify-center">
+                                    <BarChart3 className="w-8 h-8 sm:w-10 sm:h-10 text-blue-500" />
+                                </div>
+                                <h2 className="text-lg sm:text-xl font-bold mb-2">Run Analysis — or audit your own backtest</h2>
+                                <p className="text-gray-500 dark:text-gray-400 text-xs sm:text-sm max-w-md mx-auto">
+                                    Configure tickers, time period, factor weights, and seed above, then click <strong>Run Analysis</strong>. Or skip the engine entirely and audit a backtest you already have below.
+                                </p>
                             </div>
-                            <h2 className="text-lg sm:text-xl font-bold mb-2">Run Analysis to See Results</h2>
-                            <p className="text-gray-500 dark:text-gray-400 text-xs sm:text-sm max-w-md">
-                                Configure tickers, time period, factor weights, and seed above, then click <strong>Run Analysis</strong>.
-                            </p>
                         </div>
-                    </div>
+                        {/* Bring-your-own-backtest auditor — usable with no engine run */}
+                        <IntegrityTab data={null} />
+                    </>
                 ) : (
                     <>
                         {/* Tabs — ARIA compliant, scrollable on mobile */}
@@ -183,6 +189,7 @@ export default function Dashboard() {
                         </div>
 
                         {activeTab === "overview" && <OverviewTab data={data} />}
+                        {activeTab === "integrity" && <IntegrityTab data={data} />}
                         {activeTab === "equity" && <PerformanceTab data={data} />}
                         {activeTab === "risk" && <RiskTab data={data} />}
                         {activeTab === "regime" && <RegimeTab data={data} />}

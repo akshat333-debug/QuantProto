@@ -83,24 +83,42 @@ class FactorAlphaEngine:
     # Composite Signal
     # ------------------------------------------------------------------
 
+    # Default economic direction of each known factor: +1 means "higher raw
+    # value ⇒ more bullish", −1 means "higher raw value ⇒ more bearish".
+    # A high mean-reversion z-score = price extended above its mean = bearish;
+    # high realized volatility = riskier = bearish (low-vol anomaly).
+    DEFAULT_DIRECTIONS = {
+        "momentum": 1.0,
+        "mean_reversion": -1.0,
+        "volatility": -1.0,
+    }
+
     @staticmethod
     def composite_signal(
         factors: dict[str, pd.DataFrame],
         weights: dict[str, float] | None = None,
+        directions: dict[str, float] | None = None,
     ) -> pd.DataFrame:
         """Combine multiple factors into a single composite signal.
 
         Steps
         -----
-        1. For each factor, percentile-rank across assets (cross-sectional).
-        2. Compute weighted average of ranks.
-        3. Confidence = mean_rank × (1 − rank_dispersion), where
+        1. Orient each factor by its economic direction (see ``directions``)
+           so that a higher oriented value always means "more bullish".
+        2. For each factor, percentile-rank across assets (cross-sectional).
+        3. Compute weighted average of ranks.
+        4. Confidence = mean_rank × (1 − rank_dispersion), where
            rank_dispersion = std of ranks across factors / 0.5.
 
         Parameters
         ----------
         factors : dict mapping factor name → DataFrame (index=dates, cols=tickers).
         weights : optional dict of factor weights (must match keys). Equal if None.
+        directions : optional dict of factor → ±1 sign. Defaults to
+            :attr:`DEFAULT_DIRECTIONS` for known factor names (momentum +1,
+            mean_reversion −1, volatility −1) and +1 for anything else. This
+            fixes the sign clash where mean-reversion and momentum would
+            otherwise partially cancel.
 
         Returns
         -------
@@ -113,6 +131,14 @@ class FactorAlphaEngine:
         total = sum(weights.values())
         weights = {k: v / total for k, v in weights.items()}
 
+        # Resolve per-factor orientation (caller override → known default → +1)
+        directions = directions or {}
+
+        def _direction(name: str) -> float:
+            if name in directions:
+                return directions[name]
+            return FactorAlphaEngine.DEFAULT_DIRECTIONS.get(name, 1.0)
+
         # Align all factors on common index (they may differ in length)
         common_index = factors[list(factors.keys())[0]].index
         for df in factors.values():
@@ -120,9 +146,9 @@ class FactorAlphaEngine:
 
         aligned: dict[str, pd.DataFrame] = {}
         for name, df in factors.items():
-            aligned[name] = df.loc[common_index]
+            aligned[name] = df.loc[common_index] * _direction(name)
 
-        # Cross-sectional percentile rank each factor
+        # Cross-sectional percentile rank each factor (now all "higher = bullish")
         ranked: dict[str, pd.DataFrame] = {}
         for name, df in aligned.items():
             ranked[name] = df.rank(axis=1, pct=True)

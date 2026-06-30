@@ -1,0 +1,69 @@
+"""Regression tests: the pipeline stays *connected*.
+
+These exist specifically to prevent the original audit finding — components
+built and shown but never actually wired into the decision — from returning.
+"""
+
+import logging
+
+import numpy as np
+import pandas as pd
+import pytest
+
+from quantproto.walk_forward import WalkForwardBacktester
+from quantproto.agents.orchestrator import Orchestrator
+from quantproto.demo.data_loader import generate_prices
+
+logging.getLogger("hmmlearn").setLevel(logging.ERROR)
+
+
+@pytest.fixture(scope="module")
+def prices():
+    return generate_prices(["AAA", "BBB", "CCC", "DDD"], n_days=504, seed=7)
+
+
+class TestCostsWired:
+    def test_cost_reduces_returns(self, prices):
+        def alt_signal(train):
+            # Alternating concentration forces turnover between rebalances.
+            n = train.shape[1]
+            w = np.zeros(n)
+            w[len(train) % n] = 1.0
+            return pd.DataFrame(np.tile(w, (len(train), 1)),
+                                index=train.index, columns=train.columns)
+
+        free = WalkForwardBacktester.run(prices, alt_signal, 60, 20, cost_bps=0.0)
+        costed = WalkForwardBacktester.run(prices, alt_signal, 60, 20, cost_bps=50.0)
+        assert costed["total_cost"] > 0
+        assert sum(costed["returns"]) < sum(free["returns"])
+
+    def test_turnover_reported(self, prices):
+        def ew(train):
+            n = train.shape[1]
+            return pd.DataFrame(np.ones((len(train), n)) / n,
+                                index=train.index, columns=train.columns)
+
+        res = WalkForwardBacktester.run(prices, ew, 60, 20, cost_bps=5.0)
+        assert "avg_turnover" in res and res["avg_turnover"] >= 0
+
+
+class TestOrchestratorWired:
+    def test_pipeline_emits_integrity(self, prices):
+        out = Orchestrator(train_window=120, test_window=20, seed=7).run_pipeline(prices)
+        assert out["integrity"] is not None
+        assert "score" in out["integrity"]
+        assert out["action"] in {"PROCEED", "REJECT"}
+
+    def test_backtest_reports_costs(self, prices):
+        out = Orchestrator(train_window=120, test_window=20, cost_bps=5.0).run_pipeline(prices)
+        assert out["backtest"]["cost_bps"] == 5.0
+        assert out["backtest"]["avg_turnover"] >= 0
+
+    def test_regime_aware_changes_result(self, prices):
+        # Regime scaling must actually move the backtest, proving it is wired
+        # in (not merely computed and discarded as before).
+        on = Orchestrator(train_window=120, test_window=20, seed=7, regime_aware=True)
+        off = Orchestrator(train_window=120, test_window=20, seed=7, regime_aware=False)
+        r_on = on.run_pipeline(prices)["backtest"]["equity_curve"]
+        r_off = off.run_pipeline(prices)["backtest"]["equity_curve"]
+        assert r_on[-1] != r_off[-1]

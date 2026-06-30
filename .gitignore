@@ -7,6 +7,11 @@ __pycache__/
 dist/
 build/
 .eggs/
+.venv/
+venv/
+
+# Local audit store
+*.db
 
 # Dashboard (Next.js)
 dashboard/.next/

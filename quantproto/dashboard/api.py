@@ -12,6 +12,7 @@ Security:
 
 from __future__ import annotations
 
+import logging
 import os
 import re
 from typing import Literal
@@ -24,7 +25,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, field_validator
 
 from quantproto.demo.data_loader import generate_prices
-from quantproto.data.fetcher import fetch_prices
+from quantproto.data.fetcher import fetch_prices, LiveDataError
 from quantproto.factor_engine import FactorAlphaEngine
 from quantproto.risk_engine import RiskEngine
 from quantproto.walk_forward import WalkForwardBacktester
@@ -33,9 +34,43 @@ from quantproto.analytics import DrawdownAnalytics
 from quantproto.analytics.correlation import CorrelationEngine
 from quantproto.portfolio.optimiser import PortfolioOptimiser
 from quantproto.risk.stress import StressTester
+from quantproto.agents.orchestrator import Orchestrator
+from quantproto.integrity.score import robustness_report
+from quantproto.integrity.ingest import (
+    parse_returns, equity_to_returns, trades_to_returns, parse_variant_matrix,
+)
 from quantproto.genai import generate_summary, chat as genai_chat, is_available as genai_available
 
 app = FastAPI(title="QuantProto Dashboard API", version="0.1.0")
+
+# ── Durable audit-run store (SQLite by default, Postgres via DATABASE_URL) ──
+from quantproto.storage import AuditStore
+
+_store: AuditStore | None = None
+
+
+def _get_store() -> AuditStore | None:
+    global _store
+    if _store is None:
+        try:
+            _store = AuditStore()
+        except Exception as e:  # persistence must never break the API
+            logging.getLogger("quantproto.dashboard").warning("AuditStore init failed: %s", e)
+            _store = None
+    return _store
+
+
+def _record_run(kind: str, inputs: dict, report: dict | None) -> dict | None:
+    if report is None:
+        return None
+    store = _get_store()
+    if store is None:
+        return None
+    try:
+        return store.record(kind, inputs, report)
+    except Exception as e:  # swallow — recording is best-effort
+        logging.getLogger("quantproto.dashboard").warning("record failed: %s", e)
+        return None
 
 # ── CORS — restricted origins ──────────────────────────────────────────
 _raw_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000")
@@ -124,11 +159,20 @@ def run_analysis(req: AnalysisRequest):
 
     # 1. Get prices (live from Yahoo Finance or synthetic)
     if req.data_source == "live":
-        prices = fetch_prices(req.tickers, start=req.start_date, end=req.end_date)
+        try:
+            # Fail loud: never silently substitute synthetic data for "live".
+            prices = fetch_prices(
+                req.tickers, start=req.start_date, end=req.end_date,
+                allow_synthetic_fallback=False,
+            )
+        except LiveDataError as e:
+            raise HTTPException(status_code=400, detail=str(e))
         if prices.empty:
             raise HTTPException(status_code=400, detail="No data returned for the given tickers/date range. Check ticker symbols and dates.")
+        data_source_used = "live"
     else:
         prices = generate_prices(req.tickers, n_days=req.n_days, seed=req.seed)
+        data_source_used = "synthetic"
     returns = prices.pct_change().dropna()
 
     # 2. Factor signals
@@ -151,24 +195,35 @@ def run_analysis(req: AnalysisRequest):
     rp_weights = PortfolioOptimiser.risk_parity(cov)
     ms_weights = PortfolioOptimiser.max_sharpe(mu, cov)
 
-    # 4. Backtest
+    # 4. Backtest — the regime-adjusted composite alpha signal that the rest of
+    #    this response actually displays, net of transaction costs (previously
+    #    this backtested a throwaway equal-weight signal disconnected from the
+    #    alpha/regime/optimiser shown to the user).
+    COST_BPS = 5.0
+    orch = Orchestrator(
+        lookback=req.lookback,
+        train_window=req.train_window,
+        test_window=req.test_window,
+        seed=req.seed,
+        cost_bps=COST_BPS,
+    )
+
     def signal_fn(train):
-        n = train.shape[1]
-        return pd.DataFrame(
-            np.ones((len(train), n)) / n,
-            index=train.index,
-            columns=train.columns,
-        )
+        return orch._regime_scaled_signal(prices, train, req.factor_weights)
 
     bt_result = WalkForwardBacktester.run(
-        prices, signal_fn, req.train_window, req.test_window
+        prices, signal_fn, req.train_window, req.test_window, cost_bps=COST_BPS,
     )
     equity_values = bt_result["equity_curve"].values.tolist()
     equity_dates = [str(d.date()) for d in bt_result["equity_curve"].index]
     bt_returns = bt_result["returns"].values
 
-    # 5. Bootstrap Sharpe CI
+    # 5. Bootstrap Sharpe CI + integrity (overfitting) audit on the backtest.
     ci = WalkForwardBacktester.bootstrap_sharpe_ci(bt_returns, seed=req.seed)
+    integrity = robustness_report(
+        bt_returns, n_trials=1,
+        turnover=max(bt_result.get("avg_turnover", 1.0), 1e-6),
+    ) if len(bt_returns) >= 2 else None
 
     # 6. Risk metrics
     sharpe = float(RiskEngine.sharpe_ratio(bt_returns))
@@ -223,9 +278,26 @@ def run_analysis(req: AnalysisRequest):
         {"var": {"max": -0.05}, "sharpe": {"min": 0.5}},
     )
 
+    # Decision now also respects the integrity verdict (overfit ⇒ reject).
+    integrity_ok = integrity is None or integrity["verdict"] != "likely_overfit"
+    action = "PROCEED" if (gate["passed"] and integrity_ok) else "REJECT"
+
+    run_meta = _record_run(
+        "analysis",
+        {"tickers": req.tickers, "n_days": req.n_days, "seed": req.seed,
+         "data_source": data_source_used, "train_window": req.train_window,
+         "test_window": req.test_window},
+        integrity,
+    )
+
     return {
+        "run_id": None if run_meta is None else run_meta["id"],
+        "data_source_used": data_source_used,
+        "integrity": integrity,
         "summary": {
-            "action": "PROCEED" if gate["passed"] else "REJECT",
+            "action": action,
+            "robustness_score": None if integrity is None else integrity["score"],
+            "robustness_verdict": None if integrity is None else integrity["verdict"],
             "sharpe": round(sharpe, 4),
             "sortino": round(sortino, 4),
             "var_95": round(var_95 * 100, 2),
@@ -310,6 +382,94 @@ def stress_test(req: StressRequest):
 @app.get("/api/scenarios")
 def list_scenarios():
     return {"scenarios": list(StressTester.SCENARIOS.keys())}
+
+
+# ── Bring-your-own-backtest integrity audit ───────────────────────────
+
+class AuditRequest(BaseModel):
+    """Audit any backtest, produced by any tool.
+
+    Supply exactly one of ``returns`` / ``equity`` / ``trades``. Optionally add
+    a ``variant_matrix`` (rows = time, columns = the strategy configurations you
+    tried) to compute the Probability of Backtest Overfitting.
+    """
+    returns: list[float] | None = None
+    equity: list[float] | None = None
+    trades: list[float] | None = None
+    capital: float | None = Field(default=None, gt=0)
+    variant_matrix: list[list[float]] | None = None
+    n_trials: int = Field(default=1, ge=1, le=100000)
+    turnover: float = Field(default=1.0, ge=0.0, le=100.0)
+
+    @field_validator("returns", "equity", "trades")
+    @classmethod
+    def _len_guard(cls, v):
+        if v is not None and len(v) > 100_000:
+            raise ValueError("series too long (max 100000 points)")
+        return v
+
+
+@app.post("/api/audit")
+def audit_backtest(req: AuditRequest):
+    """Run the overfitting / robustness audit on a user-supplied backtest."""
+    # Resolve the return series from whichever input was provided.
+    provided = [k for k in ("returns", "equity", "trades") if getattr(req, k)]
+    if len(provided) != 1:
+        raise HTTPException(
+            status_code=400,
+            detail="Provide exactly one of: returns, equity, trades.",
+        )
+    try:
+        if req.returns is not None:
+            series = parse_returns(req.returns)
+        elif req.equity is not None:
+            series = equity_to_returns(req.equity)
+        else:
+            series = trades_to_returns(req.trades, capital=req.capital)
+
+        variant_matrix = None
+        if req.variant_matrix is not None:
+            variant_matrix = parse_variant_matrix(req.variant_matrix)
+
+        report = robustness_report(
+            series,
+            n_trials=req.n_trials,
+            turnover=req.turnover,
+            variant_matrix=variant_matrix,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    meta = _record_run(
+        "byo",
+        {"source": provided[0], "n_obs": int(series.size), "n_trials": req.n_trials,
+         "turnover": req.turnover, "has_variants": variant_matrix is not None},
+        report,
+    )
+    if meta is not None:
+        report = {**report, "run_id": meta["id"]}
+    return report
+
+
+@app.get("/api/runs")
+def list_runs(limit: int = 50):
+    """List recent audit runs (most recent first)."""
+    store = _get_store()
+    if store is None:
+        return {"runs": [], "backend": None}
+    return {"runs": store.list_runs(limit=min(limit, 200)), "backend": store.backend}
+
+
+@app.get("/api/runs/{run_id}")
+def get_run(run_id: str):
+    """Fetch a single persisted audit run by id."""
+    store = _get_store()
+    if store is None:
+        raise HTTPException(status_code=404, detail="Run storage unavailable")
+    run = store.get_run(run_id)
+    if run is None:
+        raise HTTPException(status_code=404, detail="Run not found")
+    return run
 
 
 # ── GenAI endpoints ───────────────────────────────────────────────────

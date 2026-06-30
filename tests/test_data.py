@@ -25,12 +25,23 @@ class TestSyntheticFallback:
 
 
 class TestFetchPrices:
-    def test_fallback_to_synthetic(self):
-        # FAKE_TICKER should fail yfinance download → fallback to synthetic
-        df = fetch_prices(["FAKE_TICKER_XYZ"], start="2023-01-01", end="2023-03-01", cache=False)
+    def test_opt_in_synthetic_fallback(self):
+        # With explicit opt-in, an unfetchable ticker falls back to synthetic.
+        df = fetch_prices(
+            ["FAKE_TICKER_XYZ"], start="2023-01-01", end="2023-03-01",
+            cache=False, allow_synthetic_fallback=True,
+        )
         assert isinstance(df, pd.DataFrame)
-        # Synthetic fallback always produces data; yfinance may return empty but fallback fills it
         assert df.shape[1] >= 1
+
+    def test_fails_loud_without_optin(self):
+        # Default: never silently fabricate data when live fetch is impossible.
+        from quantproto.data.fetcher import LiveDataError
+        with pytest.raises(LiveDataError):
+            fetch_prices(
+                ["FAKE_TICKER_XYZ"], start="2023-01-01", end="2023-03-01",
+                cache=False,
+            )
 
 
 class TestUniverseManager:

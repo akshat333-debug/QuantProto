@@ -8,7 +8,9 @@ WORKDIR /app
 COPY pyproject.toml ./
 COPY quantproto/ ./quantproto/
 
-RUN pip install --no-cache-dir ".[live,ai]"
+# Include the db extra so the container can use the compose Postgres/Timescale
+# for durable audit-run storage (falls back to SQLite if DATABASE_URL is unset).
+RUN pip install --no-cache-dir ".[live,ai,db]"
 
 # ---- Runtime stage ----
 FROM python:3.11-slim

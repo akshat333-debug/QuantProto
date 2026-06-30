@@ -1,6 +1,6 @@
 /* ─── API Client ──────────────────────────────────────────────── */
 
-import type { AnalysisData, StressData } from "./types";
+import type { AnalysisData, StressData, IntegrityReport } from "./types";
 
 /** Run the full analysis pipeline. */
 export async function runAnalysis(opts: {
@@ -38,6 +38,30 @@ export async function runStressTest(scenario: string, seed: number): Promise<Str
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ scenario, seed }),
+    });
+    if (!res.ok) {
+        const errBody = await res.json().catch(() => ({ detail: res.statusText }));
+        throw new Error(errBody.detail || `HTTP ${res.status}`);
+    }
+    return res.json();
+}
+
+/** Audit a bring-your-own backtest (returns / equity / trades). */
+export type AuditPayload = {
+    returns?: number[];
+    equity?: number[];
+    trades?: number[];
+    capital?: number;
+    variant_matrix?: number[][];
+    n_trials?: number;
+    turnover?: number;
+};
+
+export async function auditBacktest(payload: AuditPayload): Promise<IntegrityReport> {
+    const res = await fetch("/api/audit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
     });
     if (!res.ok) {
         const errBody = await res.json().catch(() => ({ detail: res.statusText }));

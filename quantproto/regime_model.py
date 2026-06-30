@@ -17,6 +17,19 @@ class RegimeHMM:
 
     LABELS = ["BEAR", "NEUTRAL", "BULL"]
 
+    @staticmethod
+    def _labels_for(n_states: int) -> list[str]:
+        """Ordered regime labels (lowest mean-return → highest).
+
+        Uses the canonical BEAR/NEUTRAL/BULL names for 2- and 3-state models,
+        and generic ``REGIME_i`` labels otherwise so any ``n_states`` works.
+        """
+        if n_states == 2:
+            return ["BEAR", "BULL"]
+        if n_states == 3:
+            return ["BEAR", "NEUTRAL", "BULL"]
+        return [f"REGIME_{i}" for i in range(n_states)]
+
     def __init__(self, n_states: int = 3, seed: int = 42):
         self.n_states = n_states
         self.seed = seed
@@ -91,10 +104,11 @@ class RegimeHMM:
 
         # Label states by their mean-return feature (col 0)
         means = self._model.means_[:, 0]
-        sorted_indices = np.argsort(means)  # lowest mean → BEAR
+        sorted_indices = np.argsort(means)  # lowest mean → most bearish
+        labels = self._labels_for(self.n_states)
         self._state_label_map = {}
         for rank, state_idx in enumerate(sorted_indices):
-            self._state_label_map[state_idx] = self.LABELS[rank]
+            self._state_label_map[state_idx] = labels[rank]
 
         return self
 
