@@ -96,6 +96,13 @@ Fly auto-injects `DATABASE_URL`.
 4. Click **Deploy**.  Vercel bakes the `API_URL` into the Next.js rewrite so
    all `/api/*` calls proxy to your Railway/Fly backend.
 
+**CLI note:** if you deploy with `vercel link` + `vercel deploy` instead of the
+dashboard import flow, Root Directory is a *project setting*, not something
+`vercel.json` can set — `vercel link` won't configure it either. Set it via
+the dashboard (Settings → General → Root Directory → `dashboard`) or the API:
+`PATCH /v9/projects/{id}?teamId={id}` with `{"rootDirectory": "dashboard"}`.
+Without it, the build fails with "No Next.js version detected."
+
 ### Verify
 
 Open the Vercel URL → click **Run Analysis** → watch the Integrity tab populate.
