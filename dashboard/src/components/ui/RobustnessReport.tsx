@@ -15,6 +15,34 @@ const SEVERITY_COLOR: Record<string, string> = {
     low: "text-blue-400 bg-blue-500/10 border-blue-500/20",
 };
 
+const RING_STROKE: Record<RobustnessVerdict, string> = {
+    robust: "#10B981",
+    fragile: "#F59E0B",
+    likely_overfit: "#EF4444",
+};
+
+/** Circular progress ring: fills proportionally to score (0-100). */
+function ScoreRing({ score, verdict }: { score: number; verdict: RobustnessVerdict }) {
+    const r = 42;
+    const circ = 2 * Math.PI * r;
+    const filled = circ * Math.max(0, Math.min(100, score)) / 100;
+    return (
+        <div className="relative w-24 h-24 flex-shrink-0">
+            <svg viewBox="0 0 96 96" className="w-24 h-24 -rotate-90">
+                <circle cx="48" cy="48" r={r} fill="none" strokeWidth="6" className="stroke-gray-200 dark:stroke-[#1B2536]" />
+                <circle cx="48" cy="48" r={r} fill="none" strokeWidth="6" strokeLinecap="round"
+                    stroke={RING_STROKE[verdict]}
+                    strokeDasharray={`${filled} ${circ - filled}`}
+                    style={{ transition: "stroke-dasharray 0.6s ease" }} />
+            </svg>
+            <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <span className={`text-3xl font-extrabold tabular-nums ${VERDICT_META[verdict].color}`}>{score.toFixed(0)}</span>
+                <span className="text-[9px] uppercase tracking-wider text-gray-500">/ 100</span>
+            </div>
+        </div>
+    );
+}
+
 function Stat({ label, value, hint }: { label: string; value: string; hint?: string }) {
     return (
         <div className="bg-gray-50 dark:bg-[#101827] rounded-lg p-3 border border-gray-200 dark:border-[#1B2536]">
@@ -54,12 +82,7 @@ export function RobustnessReport({ report, runId }: { report: IntegrityReport; r
         <div className="space-y-6">
             {/* Verdict banner + score */}
             <div className={`rounded-xl p-5 border ${meta.bg} ${meta.border} flex items-center gap-5`}>
-                <div className="relative flex-shrink-0">
-                    <div className={`w-24 h-24 rounded-full border-4 ${meta.border} flex flex-col items-center justify-center`}>
-                        <span className={`text-3xl font-extrabold ${meta.color}`}>{report.score.toFixed(0)}</span>
-                        <span className="text-[9px] uppercase tracking-wider text-gray-500">/ 100</span>
-                    </div>
-                </div>
+                <ScoreRing score={report.score} verdict={report.verdict} />
                 <div className="min-w-0">
                     <div className={`flex items-center gap-2 text-lg font-bold ${meta.color}`}>
                         <Icon className="w-5 h-5" /> {meta.label}
