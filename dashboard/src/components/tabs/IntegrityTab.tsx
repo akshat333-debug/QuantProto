@@ -78,7 +78,7 @@ export function IntegrityTab({ data }: { data?: AnalysisData | null }) {
                     <div className="flex flex-wrap gap-4">
                         <div className="w-40">
                             <label className={labelClass}>Input type</label>
-                            <select value={kind} onChange={(e) => setKind(e.target.value as InputKind)} className={inputClass}>
+                            <select value={kind} onChange={(e) => { setKind(e.target.value as InputKind); setError(null); }} className={inputClass}>
                                 <option value="returns">Per-period returns</option>
                                 <option value="equity">Equity / NAV curve</option>
                                 <option value="trades">Trade returns</option>
@@ -96,7 +96,7 @@ export function IntegrityTab({ data }: { data?: AnalysisData | null }) {
 
                     <div>
                         <label className={labelClass}>{kind === "equity" ? "Equity values" : "Return values"} (comma/space/newline separated)</label>
-                        <textarea value={raw} onChange={(e) => setRaw(e.target.value)} rows={4} className={`${inputClass} font-mono`} placeholder="0.012, -0.004, 0.008, 0.001, ..." />
+                        <textarea value={raw} onChange={(e) => { setRaw(e.target.value); setError(null); }} rows={4} className={`${inputClass} font-mono`} placeholder="0.012, -0.004, 0.008, 0.001, ..." />
                     </div>
 
                     <details className="text-sm">
