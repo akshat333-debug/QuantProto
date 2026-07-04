@@ -23,14 +23,18 @@ _SEVERITY_COLOR = {"high": "#ef4444", "medium": "#f59e0b", "low": "#94a3b8"}
 _CSS = """
 :root { color-scheme: dark; }
 * { box-sizing: border-box; margin: 0; }
-body { background: #0b0f17; color: #e2e8f0; font: 15px/1.55 -apple-system,
+body { background:
+    radial-gradient(1200px 500px at 15% -10%, rgba(59, 130, 246, 0.07), transparent 60%),
+    radial-gradient(1000px 450px at 85% -15%, rgba(139, 92, 246, 0.06), transparent 60%),
+    #05070c;
+  color: #e8ecf4; font: 15px/1.55 -apple-system,
        BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 32px 16px; }
 .wrap { max-width: 760px; margin: 0 auto; }
 h1 { font-size: 20px; letter-spacing: .02em; }
 h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .08em;
      color: #94a3b8; margin: 28px 0 10px; }
 .meta { color: #64748b; font-size: 12px; margin-top: 4px; word-break: break-all; }
-.card { background: #111827; border: 1px solid #1f2937; border-radius: 12px;
+.card { background: #0b111c; border: 1px solid #1b2536; border-radius: 16px;
         padding: 20px; margin-top: 16px; }
 .scorebox { display: flex; align-items: center; gap: 24px; }
 .score { font-size: 52px; font-weight: 700; line-height: 1; }
@@ -39,11 +43,11 @@ h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .08em;
          font-weight: 600; font-size: 14px; }
 .headline { color: #94a3b8; margin-top: 6px; }
 table { width: 100%; border-collapse: collapse; font-size: 14px; }
-td, th { padding: 7px 8px; border-bottom: 1px solid #1f2937; text-align: left; }
+td, th { padding: 7px 8px; border-bottom: 1px solid #1b2536; text-align: left; }
 td:last-child { text-align: right; font-variant-numeric: tabular-nums; }
-.bar { background: #1f2937; border-radius: 4px; height: 8px; overflow: hidden; }
+.bar { background: #1b2536; border-radius: 4px; height: 8px; overflow: hidden; }
 .bar > div { height: 100%; border-radius: 4px; background: #22c55e; }
-.flag { display: flex; gap: 10px; padding: 8px 0; border-bottom: 1px solid #1f2937;
+.flag { display: flex; gap: 10px; padding: 8px 0; border-bottom: 1px solid #1b2536;
         font-size: 14px; }
 .dot { flex: none; width: 8px; height: 8px; border-radius: 50%; margin-top: 7px; }
 .footer { color: #475569; font-size: 12px; margin-top: 28px; }
