@@ -80,7 +80,7 @@ export function OverviewTab({ data }: { data: AnalysisData }) {
                         </thead>
                         <tbody>
                             {data.assets.map((a) => (
-                                <tr key={a.ticker} className="border-b border-gray-100 dark:border-[#0E1522]">
+                                <tr key={a.ticker} className="border-b border-gray-100 dark:border-[#0E1522] transition-colors hover:bg-gray-50 dark:hover:bg-[#1B2536]/30">
                                     <td className="py-2 px-3 font-medium">{a.ticker}</td>
                                     <td className="py-2 px-3 text-right">${a.latest_price.toFixed(2)}</td>
                                     <td className={`py-2 px-3 text-right font-medium ${a.annualised_return >= 0 ? "text-emerald-500" : "text-red-500"}`}>

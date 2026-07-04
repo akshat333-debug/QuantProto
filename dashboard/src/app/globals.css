@@ -1,5 +1,10 @@
 @import "tailwindcss";
 
+@theme inline {
+  /* font-mono utility → JetBrains Mono (terminal feel for data/labels) */
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
 :root {
   --background: #F7F8FB;
   --foreground: #101623;

@@ -13,7 +13,7 @@ export function MetricCard({ label, value, sub, icon: Icon, color = "text-gray-1
                     <Icon className={`w-3.5 h-3.5 ${color}`} />
                 </span>
             </div>
-            <div className={`text-xl sm:text-2xl font-bold tracking-tight tabular-nums truncate ${color}`}>{value}</div>
+            <div className={`text-xl sm:text-2xl font-bold font-mono tracking-tight tabular-nums truncate ${color}`}>{value}</div>
             {sub && <div className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 mt-1 truncate">{sub}</div>}
         </div>
     );
