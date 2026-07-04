@@ -28,6 +28,7 @@
 - Durable, hash-chained audit-run store (SQLite default, Postgres/TimescaleDB via `DATABASE_URL`)
 - Redis-backed rate limiting (in-memory fallback)
 - Next.js dashboard: Integrity Audit tab + bring-your-own panel
+- Full UI redesign: sidebar layout, deep-navy design system, score ring, JetBrains Mono data typography (Stitch reference in `docs/design/`)
 - GitHub Actions CI (Python 3.11+3.12, Node 22) + Docker stack
 - 358 backend tests
 - Shareable audit-run permalinks (`GET /api/runs/{id}/report` → self-contained HTML report)
