@@ -17,7 +17,7 @@ const SEVERITY_COLOR: Record<string, string> = {
 
 function Stat({ label, value, hint }: { label: string; value: string; hint?: string }) {
     return (
-        <div className="bg-gray-50 dark:bg-[#15151A] rounded-lg p-3 border border-gray-200 dark:border-[#1F1F23]">
+        <div className="bg-gray-50 dark:bg-[#101827] rounded-lg p-3 border border-gray-200 dark:border-[#1B2536]">
             <div className="text-[10px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">{label}</div>
             <div className="text-base font-bold font-mono mt-0.5">{value}</div>
             {hint && <div className="text-[10px] text-gray-500 mt-0.5">{hint}</div>}
@@ -34,7 +34,7 @@ function ComponentBar({ label, value, max }: { label: string; value: number; max
                 <span className="text-gray-600 dark:text-gray-300">{label}</span>
                 <span className="font-mono text-gray-500">{value.toFixed(1)}/{max}</span>
             </div>
-            <div className="h-2 rounded-full bg-gray-200 dark:bg-[#1F1F23] overflow-hidden">
+            <div className="h-2 rounded-full bg-gray-200 dark:bg-[#1B2536] overflow-hidden">
                 <div className={`h-full ${color} rounded-full transition-all`} style={{ width: `${pct}%` }} />
             </div>
         </div>
@@ -83,7 +83,7 @@ export function RobustnessReport({ report, runId }: { report: IntegrityReport; r
 
             {/* Component breakdown + key statistics */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="bg-white dark:bg-[#0F0F12] rounded-xl p-5 border border-gray-200 dark:border-[#1F1F23]">
+                <div className="panel-card bg-white dark:bg-[#0B111C] rounded-2xl p-5 border border-gray-200 dark:border-[#1B2536]">
                     <h3 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-4">Score Components</h3>
                     <div className="space-y-3">
                         <ComponentBar label="Significance (PSR / Deflated Sharpe)" value={c.significance} max={c.max.significance} />
@@ -96,7 +96,7 @@ export function RobustnessReport({ report, runId }: { report: IntegrityReport; r
                     </div>
                 </div>
 
-                <div className="bg-white dark:bg-[#0F0F12] rounded-xl p-5 border border-gray-200 dark:border-[#1F1F23]">
+                <div className="panel-card bg-white dark:bg-[#0B111C] rounded-2xl p-5 border border-gray-200 dark:border-[#1B2536]">
                     <h3 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-4">Key Statistics</h3>
                     <div className="grid grid-cols-2 gap-3">
                         <Stat label="Annualised Sharpe" value={s.sharpe_annualized.toFixed(2)} />
@@ -111,7 +111,7 @@ export function RobustnessReport({ report, runId }: { report: IntegrityReport; r
 
             {/* PBO + cost-sensitivity curve */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="bg-white dark:bg-[#0F0F12] rounded-xl p-5 border border-gray-200 dark:border-[#1F1F23]">
+                <div className="panel-card bg-white dark:bg-[#0B111C] rounded-2xl p-5 border border-gray-200 dark:border-[#1B2536]">
                     <h3 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-4">Probability of Backtest Overfitting</h3>
                     {report.pbo ? (
                         <div className="space-y-3">
@@ -134,11 +134,11 @@ export function RobustnessReport({ report, runId }: { report: IntegrityReport; r
                     )}
                 </div>
 
-                <div className="bg-white dark:bg-[#0F0F12] rounded-xl p-5 border border-gray-200 dark:border-[#1F1F23]">
+                <div className="panel-card bg-white dark:bg-[#0B111C] rounded-2xl p-5 border border-gray-200 dark:border-[#1B2536]">
                     <h3 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-4">Cost Sensitivity (net Sharpe vs bps)</h3>
                     <ResponsiveContainer width="100%" height={190}>
                         <LineChart data={costData}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#1F1F23" />
+                            <CartesianGrid strokeDasharray="3 3" stroke="#1B2536" />
                             <XAxis dataKey="bps" tick={{ fontSize: 10 }} stroke="#6B7280" unit="bps" />
                             <YAxis tick={{ fontSize: 10 }} stroke="#6B7280" />
                             <Tooltip content={<ChartTooltip />} />
@@ -151,7 +151,7 @@ export function RobustnessReport({ report, runId }: { report: IntegrityReport; r
 
             {/* Red flags */}
             {report.red_flags.length > 0 && (
-                <div className="bg-white dark:bg-[#0F0F12] rounded-xl p-5 border border-gray-200 dark:border-[#1F1F23]">
+                <div className="panel-card bg-white dark:bg-[#0B111C] rounded-2xl p-5 border border-gray-200 dark:border-[#1B2536]">
                     <h3 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3 flex items-center gap-2">
                         <AlertTriangle className="w-4 h-4" /> Red Flags ({report.red_flags.length})
                     </h3>
@@ -167,14 +167,14 @@ export function RobustnessReport({ report, runId }: { report: IntegrityReport; r
             )}
 
             {/* Manual integrity checklist */}
-            <div className="bg-white dark:bg-[#0F0F12] rounded-xl p-5 border border-gray-200 dark:border-[#1F1F23]">
+            <div className="panel-card bg-white dark:bg-[#0B111C] rounded-2xl p-5 border border-gray-200 dark:border-[#1B2536]">
                 <h3 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1 flex items-center gap-2">
                     <CheckSquare className="w-4 h-4" /> Manual Integrity Checklist
                 </h3>
                 <p className="text-xs text-gray-500 mb-3">These biases can&apos;t be proven from returns alone — confirm them against how the backtest was built.</p>
                 <div className="space-y-2">
                     {report.checklist.map((item) => (
-                        <div key={item.code} className="text-sm border border-gray-200 dark:border-[#1F1F23] rounded-lg p-3">
+                        <div key={item.code} className="text-sm border border-gray-200 dark:border-[#1B2536] rounded-lg p-3">
                             <div className="font-medium text-gray-700 dark:text-gray-200">{item.question}</div>
                             <div className="text-xs text-gray-500 mt-1">{item.why}</div>
                         </div>

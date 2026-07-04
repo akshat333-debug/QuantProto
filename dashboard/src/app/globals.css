@@ -1,12 +1,12 @@
 @import "tailwindcss";
 
 :root {
-  --background: #FFFFFF;
-  --foreground: #0F0F12;
+  --background: #F7F8FB;
+  --foreground: #101623;
   --card: #FFFFFF;
-  --card-foreground: #0F0F12;
-  --border: #E8E8EB;
-  --muted: #96979A;
+  --card-foreground: #101623;
+  --border: #E5E8EF;
+  --muted: #9AA1AE;
   --muted-foreground: #6B7280;
   --accent-emerald: #059669;
   --accent-blue: #2563EB;
@@ -17,27 +17,46 @@
 }
 
 .dark {
-  --background: #0F0F12;
-  --foreground: #F3F4F6;
-  --card: #0F0F12;
-  --card-foreground: #F3F4F6;
-  --border: #1F1F23;
-  --muted: #27272A;
-  --muted-foreground: #9CA3AF;
+  --background: #05070C;
+  --foreground: #E8ECF4;
+  --card: #0B111C;
+  --card-foreground: #E8ECF4;
+  --border: #1B2536;
+  --muted: #223047;
+  --muted-foreground: #93A0B4;
 }
 
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+/* NOTE: no universal margin/padding reset here — Tailwind v4 layers all
+   utilities, and an unlayered universal reset would override every padding
+   and margin class in the app. Preflight (bundled with the tailwindcss
+   import) already normalises spacing. */
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: var(--font-inter), 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+}
+
+/* Ambient depth: faint radial glows behind the content (dark mode only) */
+.dark body {
+  background:
+    radial-gradient(1200px 500px at 15% -10%, rgba(59, 130, 246, 0.07), transparent 60%),
+    radial-gradient(1000px 450px at 85% -15%, rgba(139, 92, 246, 0.06), transparent 60%),
+    var(--background);
+  background-attachment: fixed;
+}
+
+/* Numbers in metrics and tables line up */
+.tabular-nums,
+table td {
+  font-variant-numeric: tabular-nums;
 }
 
 /* Scrollbar styling */
@@ -52,8 +71,62 @@ body {
   background: var(--muted);
   border-radius: 3px;
 }
+::-webkit-scrollbar-thumb:hover {
+  background: var(--muted-foreground);
+}
+
+/* ── Range sliders — consistent, polished, cross-browser ── */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  border-radius: 9999px;
+  background: var(--muted);
+  outline: none;
+  cursor: pointer;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  border: 3px solid var(--accent-blue);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+  transition: transform 0.15s ease;
+}
+input[type="range"]::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+}
+input[type="range"]::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  border: 3px solid var(--accent-blue);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+}
 
 /* Recharts tooltip custom styling */
 .recharts-tooltip-wrapper {
   outline: none !important;
+}
+
+/* Card hover elevation used across panels */
+.panel-card {
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.dark .panel-card:hover {
+  border-color: #28344B;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35);
+}
+
+/* Fade-in for tab panels */
+@keyframes panel-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+[role="tabpanel"] {
+  animation: panel-in 0.25s ease both;
 }

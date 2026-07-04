@@ -32,7 +32,7 @@ export function IntegrityTab({ data }: { data?: AnalysisData | null }) {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    const inputClass = "w-full px-3 py-2 rounded-lg bg-gray-50 dark:bg-[#1A1A1E] border border-gray-200 dark:border-[#2A2A2E] text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50";
+    const inputClass = "w-full px-3 py-2 rounded-lg bg-gray-50 dark:bg-[#0E1522] border border-gray-200 dark:border-[#28344B] text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50";
     const labelClass = "text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1 block";
 
     const runAudit = async () => {
@@ -74,7 +74,7 @@ export function IntegrityTab({ data }: { data?: AnalysisData | null }) {
                     </p>
                 </div>
 
-                <div className="bg-white dark:bg-[#0F0F12] rounded-xl p-5 border border-gray-200 dark:border-[#1F1F23] space-y-4">
+                <div className="panel-card bg-white dark:bg-[#0B111C] rounded-2xl p-5 border border-gray-200 dark:border-[#1B2536] space-y-4">
                     <div className="flex flex-wrap gap-4">
                         <div className="w-40">
                             <label className={labelClass}>Input type</label>

@@ -5,7 +5,7 @@ import { ChartTooltip } from "@/components/ui/ChartTooltip";
 export function PerformanceTab({ data }: { data: AnalysisData }) {
     return (
         <div role="tabpanel" id="panel-equity" aria-labelledby="tab-equity" className="space-y-6">
-            <div className="bg-white dark:bg-[#0F0F12] rounded-xl p-5 border border-gray-200 dark:border-[#1F1F23]">
+            <div className="panel-card bg-white dark:bg-[#0B111C] rounded-2xl p-5 border border-gray-200 dark:border-[#1B2536]">
                 <h3 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-4">Equity Curve</h3>
                 <ResponsiveContainer width="100%" height={350}>
                     <AreaChart data={data.equity_curve.dates.map((d, i) => ({ date: d, equity: data.equity_curve.values[i] }))}>
@@ -15,7 +15,7 @@ export function PerformanceTab({ data }: { data: AnalysisData }) {
                                 <stop offset="100%" stopColor="#059669" stopOpacity={0} />
                             </linearGradient>
                         </defs>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#1F1F23" />
+                        <CartesianGrid strokeDasharray="3 3" stroke="#1B2536" />
                         <XAxis dataKey="date" tick={{ fontSize: 10 }} stroke="#6B7280" tickFormatter={(v: string) => v.slice(5)} interval={Math.floor(data.equity_curve.dates.length / 8)} />
                         <YAxis tick={{ fontSize: 10 }} stroke="#6B7280" />
                         <Tooltip content={<ChartTooltip />} />
@@ -24,7 +24,7 @@ export function PerformanceTab({ data }: { data: AnalysisData }) {
                 </ResponsiveContainer>
             </div>
 
-            <div className="bg-white dark:bg-[#0F0F12] rounded-xl p-5 border border-gray-200 dark:border-[#1F1F23]">
+            <div className="panel-card bg-white dark:bg-[#0B111C] rounded-2xl p-5 border border-gray-200 dark:border-[#1B2536]">
                 <h3 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-4">Drawdown</h3>
                 <ResponsiveContainer width="100%" height={250}>
                     <AreaChart data={data.drawdown.dates.map((d, i) => ({ date: d, dd: data.drawdown.values[i] }))}>
@@ -34,7 +34,7 @@ export function PerformanceTab({ data }: { data: AnalysisData }) {
                                 <stop offset="100%" stopColor="#DC2626" stopOpacity={0} />
                             </linearGradient>
                         </defs>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#1F1F23" />
+                        <CartesianGrid strokeDasharray="3 3" stroke="#1B2536" />
                         <XAxis dataKey="date" tick={{ fontSize: 10 }} stroke="#6B7280" tickFormatter={(v: string) => v.slice(5)} interval={Math.floor(data.drawdown.dates.length / 8)} />
                         <YAxis tick={{ fontSize: 10 }} stroke="#6B7280" unit="%" />
                         <Tooltip content={<ChartTooltip />} />

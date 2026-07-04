@@ -50,14 +50,14 @@ export function ChatPanel({ data }: { data: AnalysisData | null }) {
     }
 
     return (
-        <div className="fixed bottom-6 right-6 z-50 w-[380px] max-h-[520px] bg-white dark:bg-[#0F0F12] rounded-2xl border border-gray-200 dark:border-[#1F1F23] shadow-2xl flex flex-col overflow-hidden">
+        <div className="fixed bottom-6 right-6 z-50 w-[380px] max-h-[520px] bg-white dark:bg-[#0B111C] rounded-2xl border border-gray-200 dark:border-[#1B2536] shadow-2xl flex flex-col overflow-hidden">
             {/* Header */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-[#1F1F23] bg-gradient-to-r from-blue-600/10 to-purple-600/10">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-[#1B2536] bg-gradient-to-r from-blue-600/10 to-purple-600/10">
                 <div className="flex items-center gap-2">
                     <Sparkles className="w-4 h-4 text-purple-500" />
                     <span className="text-sm font-semibold">QuantProto AI</span>
                 </div>
-                <button onClick={() => setIsOpen(false)} className="p-1 rounded-md hover:bg-gray-100 dark:hover:bg-[#1F1F23] transition-colors" aria-label="Close chat">
+                <button onClick={() => setIsOpen(false)} className="p-1 rounded-md hover:bg-gray-100 dark:hover:bg-[#1B2536] transition-colors" aria-label="Close chat">
                     <X className="w-4 h-4" />
                 </button>
             </div>
@@ -73,7 +73,7 @@ export function ChatPanel({ data }: { data: AnalysisData | null }) {
                                 <button
                                     key={q}
                                     onClick={() => { setInput(q); }}
-                                    className="block w-full text-left text-xs px-3 py-1.5 rounded-lg bg-gray-50 dark:bg-[#1A1A1E] hover:bg-gray-100 dark:hover:bg-[#252528] text-gray-600 dark:text-gray-400 transition-colors"
+                                    className="block w-full text-left text-xs px-3 py-1.5 rounded-lg bg-gray-50 dark:bg-[#0E1522] hover:bg-gray-100 dark:hover:bg-[#252528] text-gray-600 dark:text-gray-400 transition-colors"
                                 >
                                     {q}
                                 </button>
@@ -87,7 +87,7 @@ export function ChatPanel({ data }: { data: AnalysisData | null }) {
                         {m.role === "assistant" && <Bot className="w-5 h-5 text-purple-500 flex-shrink-0 mt-1" />}
                         <div className={`max-w-[80%] rounded-xl px-3 py-2 text-sm ${m.role === "user"
                             ? "bg-blue-600 text-white"
-                            : "bg-gray-100 dark:bg-[#1A1A1E] text-gray-800 dark:text-gray-200"
+                            : "bg-gray-100 dark:bg-[#0E1522] text-gray-800 dark:text-gray-200"
                         }`}>
                             <div className="whitespace-pre-wrap break-words">{m.content}</div>
                         </div>
@@ -98,7 +98,7 @@ export function ChatPanel({ data }: { data: AnalysisData | null }) {
                 {loading && (
                     <div className="flex gap-2 items-center">
                         <Bot className="w-5 h-5 text-purple-500" />
-                        <div className="bg-gray-100 dark:bg-[#1A1A1E] rounded-xl px-3 py-2">
+                        <div className="bg-gray-100 dark:bg-[#0E1522] rounded-xl px-3 py-2">
                             <div className="flex gap-1">
                                 <span className="w-2 h-2 bg-purple-500/60 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
                                 <span className="w-2 h-2 bg-purple-500/60 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
@@ -112,14 +112,14 @@ export function ChatPanel({ data }: { data: AnalysisData | null }) {
             </div>
 
             {/* Input */}
-            <div className="px-3 py-2 border-t border-gray-200 dark:border-[#1F1F23]">
+            <div className="px-3 py-2 border-t border-gray-200 dark:border-[#1B2536]">
                 <div className="flex gap-2">
                     <input
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
                         onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
                         placeholder="Ask about your portfolio..."
-                        className="flex-1 h-9 px-3 rounded-lg bg-gray-50 dark:bg-[#1A1A1E] border border-gray-200 dark:border-[#2A2A2E] text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                        className="flex-1 h-9 px-3 rounded-lg bg-gray-50 dark:bg-[#0E1522] border border-gray-200 dark:border-[#28344B] text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/50"
                     />
                     <button
                         onClick={handleSend}

@@ -44,7 +44,7 @@ export function OverviewTab({ data }: { data: AnalysisData }) {
             </div>
 
             {/* Mini equity curve */}
-            <div className="bg-white dark:bg-[#0F0F12] rounded-xl p-5 border border-gray-200 dark:border-[#1F1F23]">
+            <div className="panel-card bg-white dark:bg-[#0B111C] rounded-2xl p-5 border border-gray-200 dark:border-[#1B2536]">
                 <h3 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-4">Equity Curve</h3>
                 <ResponsiveContainer width="100%" height={300}>
                     <AreaChart data={data.equity_curve.dates.map((d, i) => ({ date: d, equity: data.equity_curve.values[i] }))}>
@@ -54,7 +54,7 @@ export function OverviewTab({ data }: { data: AnalysisData }) {
                                 <stop offset="100%" stopColor="#2563EB" stopOpacity={0} />
                             </linearGradient>
                         </defs>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#1F1F23" />
+                        <CartesianGrid strokeDasharray="3 3" stroke="#1B2536" />
                         <XAxis dataKey="date" tick={{ fontSize: 10 }} stroke="#6B7280" tickFormatter={(v: string) => v.slice(5)} interval={Math.floor(data.equity_curve.dates.length / 8)} />
                         <YAxis tick={{ fontSize: 10 }} stroke="#6B7280" />
                         <Tooltip content={<ChartTooltip />} />
@@ -64,12 +64,12 @@ export function OverviewTab({ data }: { data: AnalysisData }) {
             </div>
 
             {/* Asset breakdown table */}
-            <div className="bg-white dark:bg-[#0F0F12] rounded-xl p-5 border border-gray-200 dark:border-[#1F1F23]">
+            <div className="panel-card bg-white dark:bg-[#0B111C] rounded-2xl p-5 border border-gray-200 dark:border-[#1B2536]">
                 <h3 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-4">Asset Breakdown</h3>
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                         <thead>
-                            <tr className="border-b border-gray-200 dark:border-[#1F1F23]">
+                            <tr className="border-b border-gray-200 dark:border-[#1B2536]">
                                 <th className="text-left py-2 px-3 text-xs font-semibold uppercase text-gray-500 dark:text-gray-400">Ticker</th>
                                 <th className="text-right py-2 px-3 text-xs font-semibold uppercase text-gray-500 dark:text-gray-400">Price</th>
                                 <th className="text-right py-2 px-3 text-xs font-semibold uppercase text-gray-500 dark:text-gray-400">Ann. Return</th>
@@ -80,7 +80,7 @@ export function OverviewTab({ data }: { data: AnalysisData }) {
                         </thead>
                         <tbody>
                             {data.assets.map((a) => (
-                                <tr key={a.ticker} className="border-b border-gray-100 dark:border-[#1A1A1E]">
+                                <tr key={a.ticker} className="border-b border-gray-100 dark:border-[#0E1522]">
                                     <td className="py-2 px-3 font-medium">{a.ticker}</td>
                                     <td className="py-2 px-3 text-right">${a.latest_price.toFixed(2)}</td>
                                     <td className={`py-2 px-3 text-right font-medium ${a.annualised_return >= 0 ? "text-emerald-500" : "text-red-500"}`}>

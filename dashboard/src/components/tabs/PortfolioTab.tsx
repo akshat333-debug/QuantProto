@@ -30,7 +30,7 @@ export function PortfolioTab({ data }: { data: AnalysisData }) {
                 ].map(({ name, weights }) => {
                     const pieData = buildPieData(weights, data.portfolio.tickers);
                     return (
-                        <div key={name} className="bg-white dark:bg-[#0F0F12] rounded-xl p-5 border border-gray-200 dark:border-[#1F1F23]">
+                        <div key={name} className="panel-card bg-white dark:bg-[#0B111C] rounded-2xl p-5 border border-gray-200 dark:border-[#1B2536]">
                             <h3 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-4">{name}</h3>
                             <ResponsiveContainer width="100%" height={200}>
                                 <RPieChart>
@@ -61,7 +61,7 @@ export function PortfolioTab({ data }: { data: AnalysisData }) {
                 })}
             </div>
 
-            <div className="bg-white dark:bg-[#0F0F12] rounded-xl p-5 border border-gray-200 dark:border-[#1F1F23]">
+            <div className="panel-card bg-white dark:bg-[#0B111C] rounded-2xl p-5 border border-gray-200 dark:border-[#1B2536]">
                 <h3 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-4">Allocation Comparison</h3>
                 <ResponsiveContainer width="100%" height={320}>
                     <BarChart data={data.portfolio.tickers.map((t, i) => ({
@@ -70,7 +70,7 @@ export function PortfolioTab({ data }: { data: AnalysisData }) {
                         "Risk Parity": data.portfolio.risk_parity[i],
                         "Max Sharpe": data.portfolio.max_sharpe[i],
                     }))} barGap={2} barCategoryGap="20%">
-                        <CartesianGrid strokeDasharray="3 3" stroke="#1F1F23" />
+                        <CartesianGrid strokeDasharray="3 3" stroke="#1B2536" />
                         <XAxis dataKey="ticker" tick={{ fontSize: 11 }} stroke="#6B7280" />
                         <YAxis tick={{ fontSize: 10 }} stroke="#6B7280" unit="%" />
                         <Tooltip content={<ChartTooltip />} />

@@ -28,7 +28,7 @@ afterEach(() => {
 describe("Dashboard", () => {
     it("renders empty state with Run Analysis prompt", () => {
         render(<Dashboard />);
-        expect(screen.getByText("Run Analysis to See Results")).toBeInTheDocument();
+        expect(screen.getByText(/or overfit\?/i)).toBeInTheDocument();
         expect(screen.getByText("QuantProto")).toBeInTheDocument();
     });
 

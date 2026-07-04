@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { TrendingUp, RefreshCw, BarChart3, Activity, Shield, GitBranch, Zap, Crosshair } from "lucide-react";
+import { TrendingUp, RefreshCw, BarChart3, Activity, Shield, GitBranch, Zap, Crosshair, ShieldCheck, Gauge, Scale } from "lucide-react";
 import type { AnalysisData, StressData } from "@/lib/types";
 import { runAnalysis as apiRunAnalysis, runStressTest as apiRunStress, fetchScenarios } from "@/lib/api";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
@@ -87,19 +87,22 @@ export default function Dashboard() {
     }, [scenario, seed]);
 
     /* ── Input field classes (shared) ──────────────────────────── */
-    const inputClass = "w-full h-10 px-3 rounded-lg bg-gray-50 dark:bg-[#1A1A1E] border border-gray-200 dark:border-[#2A2A2E] text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50";
-    const labelClass = "text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1 block";
+    const inputClass = "w-full h-9 px-3 rounded-lg bg-gray-50 dark:bg-[#0E1522] border border-gray-200 dark:border-[#1B2536] text-sm focus:outline-none focus:border-blue-500/60 focus:ring-2 focus:ring-blue-500/20 transition-colors";
+    const labelClass = "text-[11px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1.5 block";
 
     return (
-        <div className="min-h-screen bg-white dark:bg-[#0A0A0D]">
+        <div className="min-h-screen">
             {/* Top Nav */}
-            <header className="sticky top-0 z-50 bg-white/80 dark:bg-[#0A0A0D]/80 backdrop-blur-xl border-b border-gray-200 dark:border-[#1F1F23]">
-                <div className="max-w-[1400px] mx-auto px-3 sm:px-6 h-14 sm:h-16 flex items-center justify-between">
-                    <div className="flex items-center gap-2 sm:gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center">
-                            <BarChart3 className="w-4 h-4 text-white" />
+            <header className="sticky top-0 z-50 bg-white/80 dark:bg-[#05070C]/75 backdrop-blur-xl border-b border-gray-200 dark:border-[#1B2536]">
+                <div className="max-w-[1500px] mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
+                    <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center shadow-lg shadow-blue-500/25 flex-shrink-0">
+                            <ShieldCheck className="w-4 h-4 text-white" />
                         </div>
-                        <h1 className="text-base sm:text-lg font-bold">QuantProto</h1>
+                        <div className="min-w-0">
+                            <h1 className="text-[15px] font-bold leading-tight tracking-tight">QuantProto</h1>
+                            <p className="text-[10px] text-gray-500 dark:text-gray-400 leading-tight uppercase tracking-widest hidden sm:block">Backtest-Integrity Auditor</p>
+                        </div>
                     </div>
                     <div className="flex items-center gap-2">
                         {data && <ExportPanel data={data} />}
@@ -108,95 +111,135 @@ export default function Dashboard() {
                 </div>
             </header>
 
-            <div className="max-w-[1400px] mx-auto px-3 sm:px-6 py-4 sm:py-6">
-                {/* Config Bar */}
-                <div className="bg-white dark:bg-[#0F0F12] rounded-xl border border-gray-200 dark:border-[#1F1F23] p-3 sm:p-4 mb-4 sm:mb-6">
-                    <div className="flex flex-wrap items-end gap-3 sm:gap-4">
-                        {/* Data source toggle */}
-                        <div className="w-full sm:w-36">
-                            <label htmlFor="input-source" className={labelClass}>Data Source</label>
-                            <select id="input-source" value={dataSource} onChange={(e) => setDataSource(e.target.value as "synthetic" | "live")} className={inputClass}>
-                                <option value="synthetic">Synthetic</option>
-                                <option value="live">Live (Yahoo)</option>
-                            </select>
-                        </div>
-                        <div className="flex-1 min-w-[160px]">
-                            <label htmlFor="input-tickers" className={labelClass}>Tickers</label>
-                            <input id="input-tickers" value={tickers} onChange={(e) => setTickers(e.target.value)} className={inputClass} placeholder="AAPL,GOOG,MSFT" />
-                            {tickerList.length === 0 && tickers.length > 0 && <p className="text-xs text-red-400 mt-1">Enter at least one valid ticker</p>}
-                        </div>
-                        {dataSource === "synthetic" ? (
-                            <div className="w-20 sm:w-32">
-                                <label htmlFor="input-days" className={labelClass}>Days</label>
-                                <input id="input-days" type="number" value={nDays} min={10} max={5000} onChange={(e) => setNDays(Math.max(10, Math.min(5000, Number(e.target.value) || 10)))} className={inputClass} />
-                            </div>
-                        ) : (
-                            <>
-                                <div className="w-[calc(50%-6px)] sm:w-36">
-                                    <label htmlFor="input-start" className={labelClass}>Start</label>
-                                    <input id="input-start" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className={inputClass} />
-                                </div>
-                                <div className="w-[calc(50%-6px)] sm:w-36">
-                                    <label htmlFor="input-end" className={labelClass}>End</label>
-                                    <input id="input-end" type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className={inputClass} />
-                                </div>
-                            </>
-                        )}
-                        <div className="w-20 sm:w-24">
-                            <label htmlFor="input-seed" className={labelClass}>Seed</label>
-                            <input id="input-seed" type="number" value={seed} min={0} max={999999} onChange={(e) => setSeed(Math.max(0, Math.min(999999, Number(e.target.value) || 0)))} className={inputClass} />
-                        </div>
-                        <button onClick={runAnalysis} disabled={loading || !isValid} className="w-full sm:w-auto h-10 px-6 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm flex items-center justify-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                            {loading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <TrendingUp className="w-4 h-4" />}
-                            {loading ? "Running..." : "Run Analysis"}
-                        </button>
-                    </div>
-                </div>
-
-                {/* Strategy Builder */}
-                <StrategyBuilder weights={factorWeights} onChange={setFactorWeights} />
-
+            <div className="max-w-[1500px] mx-auto px-4 sm:px-6 py-6">
                 {error && <ErrorBanner message={error} onDismiss={() => setError(null)} />}
 
-                {!data ? (
-                    <>
-                        <div className="flex items-center justify-center py-10 sm:py-14">
-                            <div className="text-center px-4">
-                                <div className="w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-4 sm:mb-6 rounded-2xl bg-gradient-to-br from-blue-600/20 to-purple-600/20 flex items-center justify-center">
-                                    <BarChart3 className="w-8 h-8 sm:w-10 sm:h-10 text-blue-500" />
+                <div className="flex flex-col lg:flex-row gap-6 items-start">
+                    {/* ── Config sidebar ── */}
+                    <aside className="w-full lg:w-[300px] lg:flex-shrink-0 lg:sticky lg:top-20 space-y-4">
+                        <div className="panel-card bg-white dark:bg-[#0B111C] rounded-2xl border border-gray-200 dark:border-[#1B2536] p-5">
+                            <div className="flex items-center gap-2 mb-4">
+                                <Gauge className="w-4 h-4 text-blue-500" />
+                                <h2 className="text-xs font-bold uppercase tracking-widest text-gray-600 dark:text-gray-300">Engine Setup</h2>
+                            </div>
+                            <div className="space-y-4">
+                                <div>
+                                    <label htmlFor="input-source" className={labelClass}>Data Source</label>
+                                    <select id="input-source" value={dataSource} onChange={(e) => setDataSource(e.target.value as "synthetic" | "live")} className={inputClass}>
+                                        <option value="synthetic">Synthetic</option>
+                                        <option value="live">Live (Yahoo)</option>
+                                    </select>
                                 </div>
-                                <h2 className="text-lg sm:text-xl font-bold mb-2">Run Analysis — or audit your own backtest</h2>
-                                <p className="text-gray-500 dark:text-gray-400 text-xs sm:text-sm max-w-md mx-auto">
-                                    Configure tickers, time period, factor weights, and seed above, then click <strong>Run Analysis</strong>. Or skip the engine entirely and audit a backtest you already have below.
-                                </p>
+                                <div>
+                                    <label htmlFor="input-tickers" className={labelClass}>Tickers</label>
+                                    <input id="input-tickers" value={tickers} onChange={(e) => setTickers(e.target.value)} className={inputClass} placeholder="AAPL,GOOG,MSFT" />
+                                    {tickerList.length === 0 && tickers.length > 0 && <p className="text-xs text-red-400 mt-1">Enter at least one valid ticker</p>}
+                                </div>
+                                {dataSource === "synthetic" ? (
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label htmlFor="input-days" className={labelClass}>Days</label>
+                                            <input id="input-days" type="number" value={nDays} min={10} max={5000} onChange={(e) => setNDays(Math.max(10, Math.min(5000, Number(e.target.value) || 10)))} className={inputClass} />
+                                        </div>
+                                        <div>
+                                            <label htmlFor="input-seed" className={labelClass}>Seed</label>
+                                            <input id="input-seed" type="number" value={seed} min={0} max={999999} onChange={(e) => setSeed(Math.max(0, Math.min(999999, Number(e.target.value) || 0)))} className={inputClass} />
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <div>
+                                                <label htmlFor="input-start" className={labelClass}>Start</label>
+                                                <input id="input-start" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className={inputClass} />
+                                            </div>
+                                            <div>
+                                                <label htmlFor="input-end" className={labelClass}>End</label>
+                                                <input id="input-end" type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className={inputClass} />
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label htmlFor="input-seed" className={labelClass}>Seed</label>
+                                            <input id="input-seed" type="number" value={seed} min={0} max={999999} onChange={(e) => setSeed(Math.max(0, Math.min(999999, Number(e.target.value) || 0)))} className={inputClass} />
+                                        </div>
+                                    </>
+                                )}
                             </div>
                         </div>
-                        {/* Bring-your-own-backtest auditor — usable with no engine run */}
-                        <IntegrityTab data={null} />
-                    </>
-                ) : (
-                    <>
-                        {/* Tabs — ARIA compliant, scrollable on mobile */}
-                        <div role="tablist" aria-label="Dashboard sections" className="flex gap-1 mb-4 sm:mb-6 overflow-x-auto pb-1 -mx-1 px-1">
-                            {TABS.map(({ id, label, icon: Icon }) => (
-                                <button key={id} role="tab" aria-selected={activeTab === id} aria-controls={`panel-${id}`} id={`tab-${id}`}
-                                    onClick={() => setActiveTab(id)}
-                                    className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap transition-colors ${activeTab === id ? "bg-blue-600 text-white" : "text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-[#1F1F23]"}`}
-                                >
-                                    <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />{label}
-                                </button>
-                            ))}
-                        </div>
 
-                        {activeTab === "overview" && <OverviewTab data={data} />}
-                        {activeTab === "integrity" && <IntegrityTab data={data} />}
-                        {activeTab === "equity" && <PerformanceTab data={data} />}
-                        {activeTab === "risk" && <RiskTab data={data} />}
-                        {activeTab === "regime" && <RegimeTab data={data} />}
-                        {activeTab === "portfolio" && <PortfolioTab data={data} />}
-                        {activeTab === "stress" && <StressTestTab stress={stress} stressLoading={stressLoading} scenario={scenario} scenarios={scenarios} onScenarioChange={setScenario} onRunStress={runStress} />}
-                    </>
-                )}
+                        {/* Strategy Builder */}
+                        <StrategyBuilder weights={factorWeights} onChange={setFactorWeights} />
+
+                        <button onClick={runAnalysis} disabled={loading || !isValid}
+                            className="w-full h-11 rounded-xl bg-gradient-to-r from-blue-600 to-violet-600 hover:from-blue-500 hover:to-violet-500 text-white font-semibold text-sm flex items-center justify-center gap-2 transition-all shadow-lg shadow-blue-600/25 hover:shadow-blue-500/40 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none">
+                            {loading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <TrendingUp className="w-4 h-4" />}
+                            {loading ? "Running…" : "Run Analysis"}
+                        </button>
+                    </aside>
+
+                    {/* ── Main content ── */}
+                    <main className="flex-1 min-w-0 w-full">
+                        {!data ? (
+                            <>
+                                {/* Hero / empty state */}
+                                <div className="relative overflow-hidden rounded-2xl border border-gray-200 dark:border-[#1B2536] bg-white dark:bg-[#0B111C] px-6 py-12 sm:py-16 mb-6 text-center">
+                                    <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(600px_200px_at_50%_-40px,rgba(59,130,246,0.12),transparent)]" />
+                                    <div className="relative">
+                                        <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight mb-3">
+                                            Is your edge <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-violet-400">real</span> — or overfit?
+                                        </h2>
+                                        <p className="text-gray-500 dark:text-gray-400 text-sm max-w-lg mx-auto mb-8">
+                                            Run the built-in research engine from the panel on the left, or paste any backtest below.
+                                            One score. An honest verdict.
+                                        </p>
+                                        <div className="flex flex-wrap justify-center gap-3">
+                                            {[
+                                                { icon: Scale, label: "Deflated Sharpe", hint: "multiple-testing corrected" },
+                                                { icon: Crosshair, label: "Overfit Probability", hint: "PBO via CSCV" },
+                                                { icon: Zap, label: "Cost Break-even", hint: "where the edge dies" },
+                                            ].map(({ icon: FIcon, label, hint }) => (
+                                                <div key={label} className="flex items-center gap-2.5 px-4 py-2.5 rounded-xl bg-gray-50 dark:bg-[#0E1522] border border-gray-200 dark:border-[#1B2536] text-left">
+                                                    <FIcon className="w-4 h-4 text-blue-500 flex-shrink-0" />
+                                                    <div>
+                                                        <div className="text-xs font-semibold">{label}</div>
+                                                        <div className="text-[10px] text-gray-500">{hint}</div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                                {/* Bring-your-own-backtest auditor — usable with no engine run */}
+                                <IntegrityTab data={null} />
+                            </>
+                        ) : (
+                            <>
+                                {/* Tabs — ARIA compliant, scrollable on mobile */}
+                                <div role="tablist" aria-label="Dashboard sections"
+                                    className="flex gap-1 mb-6 overflow-x-auto p-1 rounded-xl bg-gray-100 dark:bg-[#0B111C] border border-gray-200 dark:border-[#1B2536] w-full sm:w-fit">
+                                    {TABS.map(({ id, label, icon: Icon }) => (
+                                        <button key={id} role="tab" aria-selected={activeTab === id} aria-controls={`panel-${id}`} id={`tab-${id}`}
+                                            onClick={() => setActiveTab(id)}
+                                            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs sm:text-[13px] font-medium whitespace-nowrap transition-all ${activeTab === id
+                                                ? "bg-white dark:bg-[#1B2536] text-gray-900 dark:text-white shadow-sm"
+                                                : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"}`}
+                                        >
+                                            <Icon className={`w-3.5 h-3.5 ${activeTab === id ? "text-blue-500" : ""}`} />{label}
+                                        </button>
+                                    ))}
+                                </div>
+
+                                {activeTab === "overview" && <OverviewTab data={data} />}
+                                {activeTab === "integrity" && <IntegrityTab data={data} />}
+                                {activeTab === "equity" && <PerformanceTab data={data} />}
+                                {activeTab === "risk" && <RiskTab data={data} />}
+                                {activeTab === "regime" && <RegimeTab data={data} />}
+                                {activeTab === "portfolio" && <PortfolioTab data={data} />}
+                                {activeTab === "stress" && <StressTestTab stress={stress} stressLoading={stressLoading} scenario={scenario} scenarios={scenarios} onScenarioChange={setScenario} onRunStress={runStress} />}
+                            </>
+                        )}
+                    </main>
+                </div>
             </div>
 
             {/* Floating AI Chat */}

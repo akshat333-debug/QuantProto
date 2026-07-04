@@ -7,7 +7,7 @@ export function RiskTab({ data }: { data: AnalysisData }) {
     return (
         <div role="tabpanel" id="panel-risk" aria-labelledby="tab-risk" className="space-y-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="bg-white dark:bg-[#0F0F12] rounded-xl p-5 border border-gray-200 dark:border-[#1F1F23]">
+                <div className="panel-card bg-white dark:bg-[#0B111C] rounded-2xl p-5 border border-gray-200 dark:border-[#1B2536]">
                     <h3 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-4">Correlation Matrix</h3>
                     <div className="overflow-x-auto">
                         <table className="text-xs border-separate" style={{ borderSpacing: "4px" }}>
@@ -39,11 +39,11 @@ export function RiskTab({ data }: { data: AnalysisData }) {
                     </div>
                 </div>
 
-                <div className="bg-white dark:bg-[#0F0F12] rounded-xl p-5 border border-gray-200 dark:border-[#1F1F23]">
+                <div className="panel-card bg-white dark:bg-[#0B111C] rounded-2xl p-5 border border-gray-200 dark:border-[#1B2536]">
                     <h3 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-4">Rolling Mean Correlation</h3>
                     <ResponsiveContainer width="100%" height={250}>
                         <LineChart data={data.rolling_correlation.dates.map((d, i) => ({ date: d, corr: data.rolling_correlation.values[i] }))}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#1F1F23" />
+                            <CartesianGrid strokeDasharray="3 3" stroke="#1B2536" />
                             <XAxis dataKey="date" tick={{ fontSize: 10 }} stroke="#6B7280" tickFormatter={(v: string) => v.slice(5)} interval={Math.floor(data.rolling_correlation.dates.length / 6)} />
                             <YAxis tick={{ fontSize: 10 }} stroke="#6B7280" />
                             <Tooltip content={<ChartTooltip />} />
@@ -53,11 +53,11 @@ export function RiskTab({ data }: { data: AnalysisData }) {
                 </div>
             </div>
 
-            <div className="bg-white dark:bg-[#0F0F12] rounded-xl p-5 border border-gray-200 dark:border-[#1F1F23]">
+            <div className="panel-card bg-white dark:bg-[#0B111C] rounded-2xl p-5 border border-gray-200 dark:border-[#1B2536]">
                 <h3 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-4">PCA Explained Variance</h3>
                 <ResponsiveContainer width="100%" height={200}>
                     <BarChart data={data.pca.components.map((c, i) => ({ name: c, variance: data.pca.explained_variance[i] }))}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#1F1F23" />
+                        <CartesianGrid strokeDasharray="3 3" stroke="#1B2536" />
                         <XAxis dataKey="name" tick={{ fontSize: 11 }} stroke="#6B7280" />
                         <YAxis tick={{ fontSize: 10 }} stroke="#6B7280" unit="%" />
                         <Tooltip content={<ChartTooltip />} />

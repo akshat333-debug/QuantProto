@@ -14,7 +14,7 @@ export function StressTestTab({ stress, stressLoading, scenario, scenarios, onSc
 }) {
     return (
         <div role="tabpanel" id="panel-stress" aria-labelledby="tab-stress" className="space-y-6">
-            <div className="bg-white dark:bg-[#0F0F12] rounded-xl p-4 border border-gray-200 dark:border-[#1F1F23]">
+            <div className="panel-card bg-white dark:bg-[#0B111C] rounded-2xl p-4 border border-gray-200 dark:border-[#1B2536]">
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-end gap-4">
                     <div className="sm:w-72">
                         <label htmlFor="input-scenario" className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1 block">Scenario</label>
@@ -22,7 +22,7 @@ export function StressTestTab({ stress, stressLoading, scenario, scenarios, onSc
                             id="input-scenario"
                             value={scenario}
                             onChange={(e) => onScenarioChange(e.target.value)}
-                            className="w-full h-10 px-3 rounded-lg bg-gray-50 dark:bg-[#1A1A1E] border border-gray-200 dark:border-[#2A2A2E] text-sm"
+                            className="w-full h-10 px-3 rounded-lg bg-gray-50 dark:bg-[#0E1522] border border-gray-200 dark:border-[#28344B] text-sm"
                         >
                             {scenarios.map((s) => (
                                 <option key={s} value={s}>{s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}</option>
@@ -50,11 +50,11 @@ export function StressTestTab({ stress, stressLoading, scenario, scenarios, onSc
                     </div>
 
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        <div className="bg-white dark:bg-[#0F0F12] rounded-xl p-5 border border-gray-200 dark:border-[#1F1F23]">
+                        <div className="panel-card bg-white dark:bg-[#0B111C] rounded-2xl p-5 border border-gray-200 dark:border-[#1B2536]">
                             <h3 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-4">Stress Scenario Equity</h3>
                             <ResponsiveContainer width="100%" height={250}>
                                 <LineChart data={stress.scenario.equity.map((v, i) => ({ day: i, equity: v }))}>
-                                    <CartesianGrid strokeDasharray="3 3" stroke="#1F1F23" />
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#1B2536" />
                                     <XAxis dataKey="day" tick={{ fontSize: 10 }} stroke="#6B7280" />
                                     <YAxis tick={{ fontSize: 10 }} stroke="#6B7280" />
                                     <Tooltip content={<ChartTooltip />} />
@@ -63,11 +63,11 @@ export function StressTestTab({ stress, stressLoading, scenario, scenarios, onSc
                             </ResponsiveContainer>
                         </div>
 
-                        <div className="bg-white dark:bg-[#0F0F12] rounded-xl p-5 border border-gray-200 dark:border-[#1F1F23]">
+                        <div className="panel-card bg-white dark:bg-[#0B111C] rounded-2xl p-5 border border-gray-200 dark:border-[#1B2536]">
                             <h3 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-4">Monte Carlo Paths</h3>
                             <ResponsiveContainer width="100%" height={250}>
                                 <LineChart>
-                                    <CartesianGrid strokeDasharray="3 3" stroke="#1F1F23" />
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#1B2536" />
                                     <XAxis dataKey="day" tick={{ fontSize: 10 }} stroke="#6B7280" type="number" domain={[0, stress.monte_carlo.paths[0]?.length || 126]} />
                                     <YAxis tick={{ fontSize: 10 }} stroke="#6B7280" />
                                     <Tooltip content={<ChartTooltip />} />
