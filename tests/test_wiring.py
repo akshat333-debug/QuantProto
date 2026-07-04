@@ -67,3 +67,30 @@ class TestOrchestratorWired:
         r_on = on.run_pipeline(prices)["backtest"]["equity_curve"]
         r_off = off.run_pipeline(prices)["backtest"]["equity_curve"]
         assert r_on[-1] != r_off[-1]
+
+
+class TestRiskGateWired:
+    """The dashboard risk gate must use correct threshold direction.
+
+    Regression: the API once passed {"var": {"max": -0.05}}, which rejected
+    every portfolio whose daily VaR was *better* (less negative) than -5%,
+    while waving through portfolios losing more than 5% a day.
+    """
+
+    def test_healthy_var_is_not_a_violation(self):
+        from fastapi.testclient import TestClient
+        from quantproto.dashboard.api import app
+
+        resp = TestClient(app).post(
+            "/api/run-analysis",
+            json={"tickers": ["AAA", "BBB", "CCC"], "n_days": 300, "seed": 7},
+        )
+        assert resp.status_code == 200
+        summary = resp.json()["summary"]
+        var_violations = [
+            v for v in summary["gate_violations"] if v["metric"] == "var"
+        ]
+        if summary["var_95"] / 100 > -0.05:  # VaR safely inside the limit
+            assert var_violations == []
+        else:  # a genuinely bad VaR must still be caught
+            assert var_violations

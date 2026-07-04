@@ -275,7 +275,8 @@ def run_analysis(req: AnalysisRequest):
     # 11. Risk gate
     gate = RiskEngine.risk_gate(
         {"var": var_95, "sharpe": sharpe},
-        {"var": {"max": -0.05}, "sharpe": {"min": 0.5}},
+        # VaR is a negative return: "min" bounds how bad the loss may get.
+        {"var": {"min": -0.05}, "sharpe": {"min": 0.5}},
     )
 
     # Decision now also respects the integrity verdict (overfit ⇒ reject).
