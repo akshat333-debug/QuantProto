@@ -21,7 +21,7 @@ import numpy as np
 import pandas as pd
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from pydantic import BaseModel, Field, field_validator
 
 from quantproto.demo.data_loader import generate_prices
@@ -40,6 +40,7 @@ from quantproto.integrity.ingest import (
     parse_returns, equity_to_returns, trades_to_returns, parse_variant_matrix,
 )
 from quantproto.genai import generate_summary, chat as genai_chat, is_available as genai_available
+from quantproto.dashboard.report_html import render_report_html
 
 app = FastAPI(title="QuantProto Dashboard API", version="0.1.0")
 
@@ -471,6 +472,18 @@ def get_run(run_id: str):
     if run is None:
         raise HTTPException(status_code=404, detail="Run not found")
     return run
+
+
+@app.get("/api/runs/{run_id}/report", response_class=HTMLResponse)
+def run_report(run_id: str):
+    """Shareable, self-contained HTML robustness report for one audit run."""
+    store = _get_store()
+    if store is None:
+        raise HTTPException(status_code=404, detail="Run storage unavailable")
+    run = store.get_run(run_id)
+    if run is None:
+        raise HTTPException(status_code=404, detail="Run not found")
+    return HTMLResponse(render_report_html(run))
 
 
 # ── GenAI endpoints ───────────────────────────────────────────────────

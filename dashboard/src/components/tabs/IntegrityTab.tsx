@@ -59,7 +59,7 @@ export function IntegrityTab({ data }: { data?: AnalysisData | null }) {
                     <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-4 flex items-center gap-2">
                         <Crosshair className="w-4 h-4" /> Overfitting Audit — This Strategy
                     </h2>
-                    <RobustnessReport report={data.integrity} />
+                    <RobustnessReport report={data.integrity} runId={data.run_id} />
                 </section>
             )}
 

@@ -3,7 +3,7 @@
 > **The backtest-integrity auditor.** Paste any strategy's returns and find out whether its edge is real or an artefact of overfitting — Deflated Sharpe, Probability of Backtest Overfitting, cost break-even, and bias red-flags, distilled into one Robustness Score. Exposed as MCP tools so agents can audit strategies too.
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://python.org)
-[![Tests](https://img.shields.io/badge/tests-349%20passing-brightgreen.svg)]()
+[![Tests](https://img.shields.io/badge/tests-358%20passing-brightgreen.svg)]()
 [![CI](https://img.shields.io/github/actions/workflow/status/akshat333-debug/QuantProto/ci.yml?label=CI)](https://github.com/akshat333-debug/QuantProto/actions)
 
 ---
@@ -131,7 +131,7 @@ The **Integrity Audit** tab renders the Robustness Score, PBO, cost-sensitivity 
 docker compose up -d   # API (:9000), Dashboard (:3000), TimescaleDB, Redis
 ```
 
-Audit runs are persisted (hash-chained, tamper-evident) to Postgres/TimescaleDB when `DATABASE_URL` is set, else a local SQLite file — so results are reproducible and queryable (`GET /api/runs`). Rate limiting uses Redis when `REDIS_URL` is set.
+Audit runs are persisted (hash-chained, tamper-evident) to Postgres/TimescaleDB when `DATABASE_URL` is set, else a local SQLite file — so results are reproducible and queryable (`GET /api/runs`). Every run also has a **shareable permalink**: `GET /api/runs/{id}/report` renders a self-contained HTML robustness report you can send to a PM or allocator — no dashboard required (there's an "Open shareable report" link on every audit). Rate limiting uses Redis when `REDIS_URL` is set.
 
 ## Deploy
 
@@ -162,13 +162,13 @@ quantproto/
 └── dashboard/         # FastAPI REST API (run-analysis, audit, runs, AI summaries)
 
 dashboard/             # Next.js frontend (Integrity tab + bring-your-own auditor)
-tests/                 # 349 tests
+tests/                 # 358 tests
 ```
 
 ## Testing
 
 ```bash
-pytest                                 # full suite (349)
+pytest                                 # full suite (358)
 pytest tests/test_pbo.py               # overfitting detection
 pytest tests/test_deflated_sharpe.py   # DSR / PSR statistics
 pytest tests/test_wiring.py            # guards: components stay connected

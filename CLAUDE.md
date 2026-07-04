@@ -53,7 +53,7 @@ pip install -e ".[dev,live,ai]"        # standard dev install
 pip install -e ".[dev,live,ai,db]"     # + psycopg for Postgres
 
 # Tests
-pytest                                 # full suite (322 tests)
+pytest                                 # full suite (358 tests)
 pytest tests/test_pbo.py -v            # single file
 pytest -k "TestCostsWired" -v          # single class
 pytest --tb=short -q                   # quiet mode
@@ -127,7 +127,7 @@ IntegrityAgent (gate) → decision: PROCEED / REJECT
 | `quantproto/risk_engine.py` | VaR, CVaR, Sharpe, Sortino, HHI + risk gate |
 | `quantproto/storage/` | Hash-chained audit-run persistence (SQLite default, Postgres via `DATABASE_URL`) |
 | `quantproto/mcp/server.py` | FastMCP server; exposes `robustness_audit`, `deflated_sharpe`, `prob_backtest_overfit`, `cost_sensitivity`, `probabilistic_sharpe` |
-| `quantproto/dashboard/api.py` | FastAPI; `/api/run-analysis`, `/api/audit` (BYO), `/api/runs`, `/api/stress-test` |
+| `quantproto/dashboard/api.py` | FastAPI; `/api/run-analysis`, `/api/audit` (BYO), `/api/runs`, `/api/runs/{id}/report` (shareable HTML), `/api/stress-test` |
 | `dashboard/` | Next.js frontend with Integrity Audit tab + bring-your-own panel |
 
 ### Critical invariants (guarded by `tests/test_wiring.py`)

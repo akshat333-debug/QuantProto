@@ -29,7 +29,8 @@
 - Redis-backed rate limiting (in-memory fallback)
 - Next.js dashboard: Integrity Audit tab + bring-your-own panel
 - GitHub Actions CI (Python 3.11+3.12, Node 22) + Docker stack
-- 349 backend tests
+- 358 backend tests
+- Shareable audit-run permalinks (`GET /api/runs/{id}/report` → self-contained HTML report)
 
 ### Framework Adapters ✅
 - Backtrader: `audit_backtrader(cerebro.run(), n_trials=N)` — reads `TimeReturn` analyzer or accepts an equity series
@@ -48,7 +49,6 @@
 ## Next
 
 - [ ] Combinatorial Purged CV (CPCV) for tighter PBO estimates
-- [ ] Shareable audit-run permalinks (static HTML report from `GET /api/runs/{id}/report`)
 - [ ] Haircut Sharpe (Harvey–Liu) alongside the Deflated Sharpe
 - [ ] Playwright E2E tests for the dashboard
 - [ ] Alert webhooks when a saved strategy's robustness degrades

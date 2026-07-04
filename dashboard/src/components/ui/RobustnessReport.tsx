@@ -1,4 +1,4 @@
-import { ShieldCheck, ShieldAlert, ShieldX, AlertTriangle, CheckSquare, Info } from "lucide-react";
+import { ShieldCheck, ShieldAlert, ShieldX, AlertTriangle, CheckSquare, Info, ExternalLink } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from "recharts";
 import type { IntegrityReport, RobustnessVerdict } from "@/lib/types";
 import { ChartTooltip } from "@/components/ui/ChartTooltip";
@@ -41,11 +41,12 @@ function ComponentBar({ label, value, max }: { label: string; value: number; max
     );
 }
 
-export function RobustnessReport({ report }: { report: IntegrityReport }) {
+export function RobustnessReport({ report, runId }: { report: IntegrityReport; runId?: string | null }) {
     const meta = VERDICT_META[report.verdict];
     const Icon = meta.icon;
     const s = report.statistics;
     const c = report.components;
+    const shareId = runId ?? report.run_id;
 
     const costData = report.cost_curve.bps_grid.map((bps, i) => ({ bps, sharpe: report.cost_curve.net_sharpe[i] }));
 
@@ -67,6 +68,16 @@ export function RobustnessReport({ report }: { report: IntegrityReport }) {
                     <p className="text-xs text-gray-500 mt-1">
                         Robustness Score blends statistical significance, selection-bias, cost survival, and sample adequacy — minus red-flag penalties.
                     </p>
+                    {shareId && (
+                        <a
+                            href={`/api/runs/${shareId}/report`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300 mt-2"
+                        >
+                            <ExternalLink className="w-3 h-3" /> Open shareable report
+                        </a>
+                    )}
                 </div>
             </div>
 
