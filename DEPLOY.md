@@ -1,5 +1,12 @@
 # Deployment Guide
 
+## Currently deployed
+
+| Component | URL | Notes |
+|-----------|-----|-------|
+| **API** (Railway) | https://quantproto-production.up.railway.app | Postgres + Redis attached, `API_KEY` auth enabled |
+| **Dashboard** (Vercel) | https://quantproto.vercel.app | `API_URL` env var points at the Railway URL above |
+
 Two components to deploy:
 
 | Component | What it is | Where to deploy |
@@ -34,6 +41,10 @@ Two components to deploy:
 
 4. Railway auto-assigns a public URL like `https://quantproto-api-production.up.railway.app`.
    Copy it — you'll need it for step 3.
+
+   Note: `railway.json`'s `startCommand` wraps the uvicorn invocation in
+   `sh -c "..."` — Railway execs Dockerfile-build `startCommand`s directly
+   (no shell), so `--port $PORT` is never expanded without it.
 
 ### Fly.io (alternative)
 

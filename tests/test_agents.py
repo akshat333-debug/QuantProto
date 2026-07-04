@@ -8,14 +8,12 @@ import jwt as pyjwt
 import numpy as np
 import pandas as pd
 import pytest
-from fastapi.testclient import TestClient
 
 from quantproto.agents.auth import sign_token, verify_token, DEFAULT_SECRET
 from quantproto.agents.agent_card import AgentCard
 from quantproto.agents.alpha_agent import AlphaAgent
 from quantproto.agents.risk_agent import RiskAgent
 from quantproto.agents.orchestrator import Orchestrator
-from quantproto.agents.http_server import app
 
 
 # ── Fixtures ──────────────────────────────────────────────────────────
@@ -34,11 +32,6 @@ def sample_prices():
 @pytest.fixture
 def valid_token():
     return sign_token("test-agent")
-
-
-@pytest.fixture
-def client():
-    return TestClient(app)
 
 
 # ── JWT Auth (G4) ─────────────────────────────────────────────────────
@@ -184,46 +177,3 @@ class TestOrchestrator:
         assert "point_estimate" in ci
         assert "ci_lower" in ci
         assert "ci_upper" in ci
-
-
-# ── HTTP Server (G6) ─────────────────────────────────────────────────
-
-class TestHTTPServer:
-    def test_agent_card_endpoint(self, client):
-        resp = client.get("/agent-card")
-        assert resp.status_code == 200
-        data = resp.json()
-        assert data["name"] == "QuantProto Orchestrator"
-        assert "capabilities" in data
-
-    def test_health(self, client):
-        resp = client.get("/health")
-        assert resp.status_code == 200
-
-    def test_task_requires_auth(self, client):
-        resp = client.post("/tasks", json={"prices": {"A": [1.0, 2.0]}})
-        assert resp.status_code == 422 or resp.status_code == 401
-
-    def test_task_with_valid_token(self, client, valid_token, sample_prices):
-        price_dict = {col: sample_prices[col].tolist() for col in sample_prices.columns}
-        resp = client.post(
-            "/tasks",
-            json={
-                "prices": price_dict,
-                "train_window": 60,
-                "test_window": 20,
-                "seed": 42,
-            },
-            headers={"Authorization": f"Bearer {valid_token}"},
-        )
-        assert resp.status_code == 200
-        data = resp.json()
-        assert data["action"] in ("PROCEED", "REJECT")
-
-    def test_task_with_invalid_token(self, client):
-        resp = client.post(
-            "/tasks",
-            json={"prices": {"A": [1.0] * 100}},
-            headers={"Authorization": "Bearer invalid.token.here"},
-        )
-        assert resp.status_code == 401

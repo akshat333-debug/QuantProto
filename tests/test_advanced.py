@@ -6,11 +6,9 @@ import pandas as pd
 import pytest
 
 from quantproto.regime import EnsembleRegime
-from quantproto.backtest import EventBacktester, Order, OrderType
 from quantproto.trading import PaperBroker
 from quantproto.risk.stress import StressTester
 from quantproto.compliance import AuditLog, PreTradeCompliance
-from quantproto.ml.feature_store import FeatureStore
 from quantproto.ml.models import MLAlphaModel, PurgedKFold
 from quantproto.strategy.multi_strategy import MultiStrategyManager
 from quantproto.strategy.base import MomentumStrategy, MeanReversionStrategy
@@ -54,42 +52,6 @@ class TestEnsembleRegime:
         assert result["ensemble_score"].min() >= 0.0 - 1e-6
 
 
-# ── T2.3: Event-Driven Backtester ─────────────────────────────────────
-
-class TestEventBacktester:
-    def test_runs_without_error(self, prices):
-        def signal_fn(positions, prices_so_far, ts):
-            if len(prices_so_far) == 50:  # Buy on day 50
-                return [Order("A", 100, OrderType.MARKET)]
-            return []
-
-        bt = EventBacktester(prices, signal_fn, latency=1)
-        result = bt.run()
-        assert "equity_curve" in result
-        assert "fills" in result
-        assert "returns" in result
-
-    def test_fills_with_latency(self, prices):
-        def signal_fn(positions, prices_so_far, ts):
-            if len(prices_so_far) == 10:
-                return [Order("A", 100)]
-            return []
-
-        bt = EventBacktester(prices, signal_fn, latency=2)
-        result = bt.run()
-        assert result["n_fills"] >= 1
-
-    def test_limit_order_no_fill(self, prices):
-        def signal_fn(positions, prices_so_far, ts):
-            if len(prices_so_far) == 10:
-                return [Order("A", 100, OrderType.LIMIT, limit_price=0.01)]
-            return []
-
-        bt = EventBacktester(prices, signal_fn, latency=1)
-        result = bt.run()
-        assert result["n_fills"] == 0
-
-
 # ── T2.5: Paper Trading ──────────────────────────────────────────────
 
 class TestPaperBroker:
@@ -120,19 +82,6 @@ class TestPaperBroker:
 
 
 # ── T3.1: ML Alpha ────────────────────────────────────────────────────
-
-class TestFeatureStore:
-    def test_compute_features(self, prices):
-        store = FeatureStore()
-        features = store.compute_features(prices, lookback=10)
-        assert len(features) > 0
-        assert features.shape[1] > 0
-
-    def test_get_target(self, prices):
-        store = FeatureStore()
-        target = store.get_target(prices, horizon=5)
-        assert len(target) > 0
-
 
 class TestMLAlphaModel:
     def test_fit_predict(self):

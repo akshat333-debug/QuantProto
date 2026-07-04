@@ -13,6 +13,9 @@ venv/
 # Local audit store
 *.db
 
+# Secrets
+.env
+
 # Dashboard (Next.js)
 dashboard/.next/
 dashboard/node_modules/

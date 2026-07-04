@@ -3,7 +3,7 @@
 > **The backtest-integrity auditor.** Paste any strategy's returns and find out whether its edge is real or an artefact of overfitting — Deflated Sharpe, Probability of Backtest Overfitting, cost break-even, and bias red-flags, distilled into one Robustness Score. Exposed as MCP tools so agents can audit strategies too.
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://python.org)
-[![Tests](https://img.shields.io/badge/tests-358%20passing-brightgreen.svg)]()
+[![Tests](https://img.shields.io/badge/tests-348%20passing-brightgreen.svg)]()
 [![CI](https://img.shields.io/github/actions/workflow/status/akshat333-debug/QuantProto/ci.yml?label=CI)](https://github.com/akshat333-debug/QuantProto/actions)
 
 ---
@@ -135,6 +135,9 @@ Audit runs are persisted (hash-chained, tamper-evident) to Postgres/TimescaleDB 
 
 ## Deploy
 
+**Live:** dashboard at [quantproto.vercel.app](https://quantproto.vercel.app), API at
+[quantproto-production.up.railway.app](https://quantproto-production.up.railway.app).
+
 See [DEPLOY.md](DEPLOY.md) for the full step-by-step guide.
 
 **TL;DR (5 minutes):**
@@ -162,13 +165,13 @@ quantproto/
 └── dashboard/         # FastAPI REST API (run-analysis, audit, runs, AI summaries)
 
 dashboard/             # Next.js frontend (Integrity tab + bring-your-own auditor)
-tests/                 # 358 tests
+tests/                 # 348 tests
 ```
 
 ## Testing
 
 ```bash
-pytest                                 # full suite (358)
+pytest                                 # full suite (348)
 pytest tests/test_pbo.py               # overfitting detection
 pytest tests/test_deflated_sharpe.py   # DSR / PSR statistics
 pytest tests/test_wiring.py            # guards: components stay connected

@@ -53,7 +53,7 @@ pip install -e ".[dev,live,ai]"        # standard dev install
 pip install -e ".[dev,live,ai,db]"     # + psycopg for Postgres
 
 # Tests
-pytest                                 # full suite (358 tests)
+pytest                                 # full suite (348 tests)
 pytest tests/test_pbo.py -v            # single file
 pytest -k "TestCostsWired" -v          # single class
 pytest --tb=short -q                   # quiet mode
