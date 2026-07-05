@@ -103,3 +103,13 @@ export type SensitivityResult = {
     verdict: "plateau" | "soft_peak" | "sharp_peak" | "inconclusive" | "insufficient";
     message: string;
 };
+
+export type DriftResult = {
+    state: "no_backtest" | "no_live_data" | "insufficient_data" | "consistent" | "watch" | "diverging";
+    message: string;
+    n_live?: number;
+    n_backtest?: number;
+    backtest_sharpe_ann?: number;
+    live_sharpe_ann?: number;
+    consistency_prob?: number;
+};

@@ -18,6 +18,7 @@ Entry point::
 from quantproto.tracker.ledger import RunLedger
 from quantproto.tracker.experiment import Experiment, experiment
 from quantproto.tracker.budget import research_budget, parameter_sensitivity
+from quantproto.tracker.drift import live_consistency
 
 __all__ = [
     "RunLedger",
@@ -25,4 +26,5 @@ __all__ = [
     "experiment",
     "research_budget",
     "parameter_sensitivity",
+    "live_consistency",
 ]

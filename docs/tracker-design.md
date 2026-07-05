@@ -128,10 +128,37 @@ the community's "RSI 14 works, 13/15 don't" red flag, quantified.
 
 ## Phases
 
-1. **This change**: `quantproto/tracker/` (ledger, budget, experiment API,
+1. **Done**: `quantproto/tracker/` (ledger, budget, experiment API,
    backtesting.py + vectorbt capture helpers), `qp` CLI, exports, tests.
-2. Dashboard: experiments tab reading the ledger; budget meter component;
-   `/api/experiments` endpoints. MCP tools: `research_budget`, `log_run` —
-   audit gate for AI-generated strategies.
-3. Live-drift monitor: log live fills against an experiment, PSR-consistency test
-   backtest-vs-live. Postgres ledger backend. Shareable provenance certificate HTML.
+2. **Done**: Dashboard experiments tab reading the ledger; budget meter
+   component; `/api/experiments*` endpoints. MCP tools: `research_budget`,
+   `log_run`, `experiment_report` — audit gate for AI-generated strategies.
+3. **Done**: Live-drift monitor, Postgres ledger backend, shareable
+   provenance certificate, deeper framework hooks (below).
+
+### Phase 3 detail
+
+- **Postgres ledger backend** (`quantproto/tracker/ledger.py`): same
+  `DATABASE_URL` + `psycopg` auto-detection as `AuditStore`, graceful
+  fallback to SQLite on any connection failure. Own `experiments`/`runs`
+  tables — can share a database with `AuditStore` without collision.
+- **Live-drift monitor** (`quantproto/tracker/drift.py`): `exp.log_live(returns,
+  params)` records live fills with `source="live"`, deliberately excluded
+  from `_distinct_configs` (a live run is the deployed config's track record,
+  not a new variant — mixing it into the search would corrupt DSR/PBO).
+  `exp.drift()` runs a two-sample PSR test: P(true live Sharpe ≥ backtest
+  Sharpe | live sample). States: `no_backtest` / `no_live_data` /
+  `insufficient_data` (< `MIN_LIVE_OBS` = 20) / `consistent` / `watch` /
+  `diverging`. Exposed via MCP (`log_live`, `live_drift`), API
+  (`POST/GET .../live`, `GET .../drift`), CLI (`qp drift`).
+- **Provenance certificate** (`quantproto/tracker/certificate.py`):
+  `render_certificate_html(exp.report())` — reuses the score/stats/PBO/flags
+  rendering from `dashboard/report_html.py` and adds a provenance block (runs
+  logged, distinct configs, chain-intact badge). This is the artifact that
+  answers what allocators say they can't verify: an honest, tamper-evident
+  trial count. `qp certificate`, `GET /api/experiments/{name}/certificate`.
+- **Deeper framework hooks**: `exp.capture_zipline(perf)` and
+  `exp.capture_bt(result)` reuse the existing extraction logic from
+  `quantproto/adapters/zipline.py` / `adapters/bt.py` rather than
+  duplicating it — one parser, two consumers (one-shot audit vs. tracked
+  search).

@@ -146,3 +146,14 @@ export async function fetchSensitivity(name: string, param: string): Promise<Sen
     }
     return res.json();
 }
+
+export async function fetchDrift(name: string): Promise<import("./types").DriftResult> {
+    const res = await fetch(`/api/experiments/${encodeURIComponent(name)}/drift`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.json();
+}
+
+/** Build the shareable provenance-certificate URL for an experiment. */
+export function certificateUrl(name: string): string {
+    return `/api/experiments/${encodeURIComponent(name)}/certificate`;
+}

@@ -484,6 +484,47 @@ def research_budget(experiment: str) -> dict[str, Any]:
 
 
 @mcp.tool()
+def log_live(
+    experiment: str,
+    returns: list[float],
+    params: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Log live fills for drift tracking (excluded from the trial/config count).
+
+    Call as live P&L accrues for a deployed strategy. Use ``live_drift`` to
+    test whether the live track record is still consistent with the backtest
+    that justified deploying it.
+    """
+    rate_limiter.consume()
+    start = time.time()
+    validate_returns_input(returns)
+    from quantproto.tracker import experiment as open_experiment
+
+    exp = open_experiment(experiment)
+    receipt = exp.log_live(returns, params=params)
+    _log_tool_call("log_live", start)
+    return {"receipt": receipt, "drift": exp.drift()}
+
+
+@mcp.tool()
+def live_drift(experiment: str) -> dict[str, Any]:
+    """Test whether live performance is still consistent with the backtest.
+
+    Compares logged live fills against the best backtest config using a
+    Probabilistic-Sharpe two-sample test. States: consistent / watch /
+    diverging / no_live_data / no_backtest. Use as a decay alarm for
+    deployed strategies.
+    """
+    rate_limiter.consume()
+    start = time.time()
+    from quantproto.tracker import experiment as open_experiment
+
+    result = open_experiment(experiment).drift()
+    _log_tool_call("live_drift", start)
+    return result
+
+
+@mcp.tool()
 def experiment_report(experiment: str, turnover: float = 1.0) -> dict[str, Any]:
     """Full robustness report of an experiment's best config.
 

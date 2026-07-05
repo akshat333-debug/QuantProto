@@ -79,6 +79,32 @@ class TestExperimentEndpoints:
         r = client.get("/api/experiments/nonexistent/report")
         assert r.status_code == 404
 
+    def test_certificate_endpoint(self, client):
+        rng = np.random.default_rng(20)
+        for i in range(9):
+            _log(client, "cert-exp", rng.normal(0, 0.01, 256), {"lb": i})
+        r = client.get("/api/experiments/cert-exp/certificate")
+        assert r.status_code == 200
+        assert "text/html" in r.headers["content-type"]
+        assert "cert-exp" in r.text
+
+    def test_live_and_drift_endpoints(self, client):
+        rng = np.random.default_rng(21)
+        _log(client, "live-exp", rng.normal(0.001, 0.01, 500), {"a": 1})
+        r = client.post(
+            "/api/experiments/live-exp/live",
+            json={"returns": list(rng.normal(0.001, 0.01, 60)), "params": {"a": 1}},
+        )
+        assert r.status_code == 200
+        assert r.json()["drift"]["state"] in ("consistent", "watch", "diverging")
+
+        d = client.get("/api/experiments/live-exp/drift").json()
+        assert d["state"] in ("consistent", "watch", "diverging")
+
+    def test_drift_no_data_states(self, client):
+        d = client.get("/api/experiments/never-seen/drift").json()
+        assert d["state"] == "no_backtest"
+
 
 class TestMCPTools:
     def test_tracker_tools_registered(self):
@@ -87,7 +113,8 @@ class TestMCPTools:
 
         tools = asyncio.run(mcp.list_tools())
         names = {t.name for t in tools}
-        assert {"log_run", "research_budget", "experiment_report"} <= names
+        assert {"log_run", "research_budget", "experiment_report",
+                "log_live", "live_drift"} <= names
 
     def test_log_run_and_budget_flow(self, tmp_path, monkeypatch):
         monkeypatch.setenv("QUANTPROTO_LEDGER", str(tmp_path / "mcp.db"))
@@ -104,3 +131,16 @@ class TestMCPTools:
 
         budget = server.research_budget(experiment="mcp-exp")
         assert budget["n_runs"] == 1
+
+    def test_log_live_and_live_drift(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("QUANTPROTO_LEDGER", str(tmp_path / "mcp_live.db"))
+        from quantproto.mcp import server
+
+        rng = np.random.default_rng(5)
+        server.log_run(experiment="mcp-live", returns=list(rng.normal(0.001, 0.01, 400)),
+                        params={"a": 1})
+        out = server.log_live(experiment="mcp-live",
+                               returns=list(rng.normal(0.001, 0.01, 60)), params={"a": 1})
+        assert "drift" in out
+        d = server.live_drift(experiment="mcp-live")
+        assert d["state"] in ("consistent", "watch", "diverging")

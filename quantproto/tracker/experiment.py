@@ -28,6 +28,7 @@ from quantproto.tracker.budget import (
     _distinct_configs,
     _variant_matrix,
 )
+from quantproto.tracker.drift import live_consistency
 
 
 def _code_hash(obj: Any) -> str | None:
@@ -102,6 +103,15 @@ class Experiment:
         return self._record(_coerce(returns), dict(params or {}), source,
                             _code_hash(strategy))
 
+    def log_live(self, returns, params: dict[str, Any] | None = None) -> dict:
+        """Log live fills (returns or per-period P&L fractions) for drift tracking.
+
+        Kept out of the research-budget's config search (see
+        :func:`quantproto.tracker.budget._distinct_configs`) — this is the
+        deployed strategy's real track record, not a new variant.
+        """
+        return self._record(_coerce(returns), dict(params or {}), "live", None)
+
     def _record(self, returns: np.ndarray, params: dict, source: str,
                 code_hash: str | None) -> dict:
         return self.ledger.record_run(
@@ -127,6 +137,27 @@ class Experiment:
         """Log a vectorbt Portfolio's returns; returns the ledger receipt."""
         returns = portfolio.returns()
         return self.log(returns, params=params, source="vectorbt")
+
+    def capture_zipline(self, perf, params: dict[str, Any] | None = None) -> dict:
+        """Log a Zipline ``run_algorithm()`` perf DataFrame; returns the receipt.
+
+        Reuses the same extraction as :func:`quantproto.adapters.zipline.audit_zipline`.
+        """
+        from quantproto.adapters.zipline import _extract
+
+        returns_arr, _ = _extract(perf)
+        return self.log(returns_arr, params=params, source="zipline")
+
+    def capture_bt(self, result, strategy_name: str | None = None,
+                   params: dict[str, Any] | None = None) -> dict:
+        """Log a ``bt.Result`` object; returns the receipt.
+
+        Reuses the same extraction as :func:`quantproto.adapters.bt.audit_bt`.
+        """
+        from quantproto.adapters.bt import _extract
+
+        returns_arr, _ = _extract(result, strategy_name)
+        return self.log(returns_arr, params=params, source="bt")
 
     # ── Analysis ──────────────────────────────────────────────────────────
     def _runs(self) -> list[dict]:
@@ -162,6 +193,29 @@ class Experiment:
 
     def sensitivity(self, param: str) -> dict:
         return parameter_sensitivity(self._runs(), param)
+
+    def drift(self, target_prob: float = 0.95) -> dict:
+        """Live-vs-backtest consistency: has the deployed edge decayed?
+
+        Compares all logged live fills against the best backtest config's
+        returns. Requires at least one backtest run and ``MIN_LIVE_OBS`` live
+        observations.
+        """
+        runs = self._runs()
+        configs = _distinct_configs(runs)
+        if not configs:
+            return {"state": "no_backtest", "message":
+                    f"experiment '{self.name}' has no logged backtest runs to compare against."}
+        live_runs = [r for r in runs if r["source"] == "live"]
+        if not live_runs:
+            return {"state": "no_live_data", "message":
+                    "No live fills logged yet — call exp.log_live() as fills come in."}
+
+        best = max(configs, key=lambda c: c["sharpe"])
+        live_returns = np.concatenate([r["returns"] for r in live_runs])
+        return live_consistency(
+            np.asarray(best["returns"], dtype=float), live_returns, target_prob=target_prob
+        )
 
     def runs(self) -> list[dict]:
         """Run history without the raw return arrays."""

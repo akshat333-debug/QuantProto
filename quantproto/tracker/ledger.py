@@ -1,15 +1,22 @@
-"""Hash-chained SQLite ledger of backtest runs.
+"""Hash-chained ledger of backtest runs.
 
 Distinct from :class:`quantproto.storage.AuditStore`: that persists finished
 *audit reports*; this records the raw *research process* — every configuration
 tried, in order, tamper-evident. The chain is what lets a report later claim
 "N trials, honestly counted".
+
+Backend, chosen automatically like ``AuditStore``:
+- ``DATABASE_URL=postgresql://…`` + ``psycopg`` installed → Postgres/TimescaleDB
+  (shares the database with ``AuditStore`` but uses its own tables)
+- otherwise → a local SQLite file (``~/.quantproto/experiments.db``, override
+  with ``QUANTPROTO_LEDGER``)
 """
 
 from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import os
 import sqlite3
 import uuid
@@ -59,21 +66,58 @@ def _per_period_sharpe(returns: np.ndarray) -> float:
 class RunLedger:
     """Persist and query hash-chained experiment runs."""
 
-    def __init__(self, path: str | os.PathLike | None = None):
-        env = os.getenv("QUANTPROTO_LEDGER")
-        self.path = Path(path) if path is not None else Path(env) if env else DEFAULT_LEDGER_PATH
+    def __init__(self, path: str | os.PathLike | None = None, url: str | None = None):
+        self.url = url if url is not None else os.getenv("DATABASE_URL")
+        self._pg = False
+        env_path = os.getenv("QUANTPROTO_LEDGER")
+        self.path = (
+            Path(path) if path is not None else Path(env_path) if env_path else DEFAULT_LEDGER_PATH
+        )
+        self._conn = self._connect()
+        self._init_schema()
+
+    # ── Backend selection (mirrors quantproto.storage.AuditStore) ─────────
+    def _connect(self):
+        if self.url and self.url.startswith(("postgres://", "postgresql://")):
+            try:
+                import psycopg  # type: ignore
+
+                self._pg = True
+                return psycopg.connect(self.url)
+            except Exception as e:  # psycopg missing or connection failed
+                logging.getLogger("quantproto.tracker").warning(
+                    "Postgres unavailable (%s); falling back to SQLite.", e
+                )
+                self._pg = False
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        self._conn = sqlite3.connect(str(self.path), check_same_thread=False)
-        self._conn.executescript(_SCHEMA)
+        return sqlite3.connect(str(self.path), check_same_thread=False)
+
+    @property
+    def backend(self) -> str:
+        return "postgres" if self._pg else "sqlite"
+
+    def _ph(self) -> str:
+        return "%s" if self._pg else "?"
+
+    def _init_schema(self) -> None:
+        cur = self._conn.cursor()
+        if self._pg:
+            for stmt in _SCHEMA.strip().split(";"):
+                stmt = stmt.strip()
+                if stmt:
+                    cur.execute(stmt)
+        else:
+            self._conn.executescript(_SCHEMA)
         self._conn.commit()
 
     # ── Experiments ───────────────────────────────────────────────────────
     def ensure_experiment(self, name: str, meta: dict | None = None) -> None:
+        ph = self._ph()
         cur = self._conn.cursor()
-        cur.execute("SELECT 1 FROM experiments WHERE name = ?", (name,))
+        cur.execute(f"SELECT 1 FROM experiments WHERE name = {ph}", (name,))
         if cur.fetchone() is None:
             cur.execute(
-                "INSERT INTO experiments (name, created_ts, meta) VALUES (?, ?, ?)",
+                f"INSERT INTO experiments (name, created_ts, meta) VALUES ({ph}, {ph}, {ph})",
                 (name, datetime.now(timezone.utc).isoformat(), json.dumps(meta or {})),
             )
             self._conn.commit()
@@ -83,7 +127,7 @@ class RunLedger:
         cur.execute(
             "SELECT e.name, e.created_ts, COUNT(r.id) FROM experiments e "
             "LEFT JOIN runs r ON r.experiment = e.name "
-            "GROUP BY e.name ORDER BY e.created_ts DESC"
+            "GROUP BY e.name, e.created_ts ORDER BY e.created_ts DESC"
         )
         return [
             {"name": n, "created_ts": ts, "n_runs": c} for n, ts, c in cur.fetchall()
@@ -92,9 +136,10 @@ class RunLedger:
     # ── Runs ──────────────────────────────────────────────────────────────
     def _tail(self, experiment: str) -> tuple[int, str]:
         """(last seq, last hash) for an experiment's chain."""
+        ph = self._ph()
         cur = self._conn.cursor()
         cur.execute(
-            "SELECT seq, hash FROM runs WHERE experiment = ? ORDER BY seq DESC LIMIT 1",
+            f"SELECT seq, hash FROM runs WHERE experiment = {ph} ORDER BY seq DESC LIMIT 1",
             (experiment,),
         )
         row = cur.fetchone()
@@ -134,10 +179,11 @@ class RunLedger:
                 "prev": prev,
             }
         )
-        self._conn.execute(
-            "INSERT INTO runs (id, experiment, seq, ts, params, params_hash, source, "
-            "code_hash, n_obs, sharpe, returns, prev_hash, hash) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        ph = self._ph()
+        self._conn.cursor().execute(
+            f"INSERT INTO runs (id, experiment, seq, ts, params, params_hash, source, "
+            f"code_hash, n_obs, sharpe, returns, prev_hash, hash) "
+            f"VALUES ({ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph})",
             (
                 run_id, experiment, seq, ts, params_json, params_hash, source,
                 code_hash, int(r.size), _per_period_sharpe(r), returns_json,
@@ -151,9 +197,10 @@ class RunLedger:
         cols = "id, seq, ts, params, params_hash, source, code_hash, n_obs, sharpe"
         if with_returns:
             cols += ", returns"
+        ph = self._ph()
         cur = self._conn.cursor()
         cur.execute(
-            f"SELECT {cols} FROM runs WHERE experiment = ? ORDER BY seq ASC",
+            f"SELECT {cols} FROM runs WHERE experiment = {ph} ORDER BY seq ASC",
             (experiment,),
         )
         out = []
@@ -171,10 +218,11 @@ class RunLedger:
 
     def verify_chain(self, experiment: str) -> bool:
         """Confirm the experiment's run chain is intact and untampered."""
+        ph = self._ph()
         cur = self._conn.cursor()
         cur.execute(
-            "SELECT id, seq, ts, params_hash, returns, prev_hash, hash "
-            "FROM runs WHERE experiment = ? ORDER BY seq ASC",
+            f"SELECT id, seq, ts, params_hash, returns, prev_hash, hash "
+            f"FROM runs WHERE experiment = {ph} ORDER BY seq ASC",
             (experiment,),
         )
         prev = "genesis"

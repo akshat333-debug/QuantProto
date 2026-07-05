@@ -565,6 +565,56 @@ def experiment_report(name: str, turnover: float = 1.0):
         raise HTTPException(status_code=404, detail=str(e))
 
 
+@app.get("/api/experiments/{name}/certificate", response_class=HTMLResponse)
+def experiment_certificate(name: str, turnover: float = 1.0):
+    """Shareable, self-contained HTML provenance certificate for an experiment."""
+    from quantproto.tracker.certificate import render_certificate_html
+
+    try:
+        report = _open_experiment(name).report(turnover=turnover)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    return HTMLResponse(render_certificate_html(report))
+
+
+@app.get("/api/experiments/{name}/drift")
+def experiment_drift(name: str):
+    """Live-vs-backtest consistency: has the deployed edge decayed?"""
+    return _open_experiment(name).drift()
+
+
+class LogLiveRequest(BaseModel):
+    """Log live fills (returns or equity) for drift tracking."""
+    returns: list[float] | None = None
+    equity: list[float] | None = None
+    params: dict = Field(default_factory=dict)
+
+    @field_validator("returns", "equity")
+    @classmethod
+    def _len_guard(cls, v):
+        if v is not None and len(v) > 100_000:
+            raise ValueError("series too long (max 100000 points)")
+        return v
+
+
+@app.post("/api/experiments/{name}/live")
+def experiment_log_live(name: str, req: LogLiveRequest):
+    """Append live fills; excluded from the config search, used for drift only."""
+    provided = [k for k in ("returns", "equity") if getattr(req, k)]
+    if len(provided) != 1:
+        raise HTTPException(status_code=400, detail="Provide exactly one of: returns, equity.")
+    exp = _open_experiment(name)
+    try:
+        if req.returns is not None:
+            receipt = exp.log_live(req.returns, params=req.params)
+        else:
+            series = equity_to_returns(req.equity)
+            receipt = exp.log_live(series, params=req.params)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return {"receipt": receipt, "drift": exp.drift()}
+
+
 # ── GenAI endpoints ───────────────────────────────────────────────────
 
 class SummaryRequest(BaseModel):

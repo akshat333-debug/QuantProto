@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { FlaskConical, RefreshCw, ShieldCheck, ShieldAlert, Link2 } from "lucide-react";
-import type { ExperimentSummary, ExperimentDetail, SensitivityResult } from "@/lib/types";
-import { fetchExperiments, fetchExperimentDetail, fetchSensitivity } from "@/lib/api";
+import { FlaskConical, RefreshCw, ShieldCheck, ShieldAlert, Link2, Radar, FileBadge } from "lucide-react";
+import type { ExperimentSummary, ExperimentDetail, SensitivityResult, DriftResult } from "@/lib/types";
+import { fetchExperiments, fetchExperimentDetail, fetchSensitivity, fetchDrift, certificateUrl } from "@/lib/api";
 
 /* ─── Budget-state styling ────────────────────────────────────── */
 
@@ -12,6 +12,15 @@ const STATE_STYLE: Record<string, { badge: string; label: string }> = {
     warning: { badge: "bg-amber-500/15 text-amber-500 border-amber-500/30", label: "WARNING" },
     burned: { badge: "bg-red-500/15 text-red-500 border-red-500/30", label: "BURNED" },
     empty: { badge: "bg-gray-500/15 text-gray-500 border-gray-500/30", label: "EMPTY" },
+};
+
+const DRIFT_STYLE: Record<string, { badge: string; label: string }> = {
+    consistent: { badge: "bg-emerald-500/15 text-emerald-500 border-emerald-500/30", label: "CONSISTENT" },
+    watch: { badge: "bg-amber-500/15 text-amber-500 border-amber-500/30", label: "WATCH" },
+    diverging: { badge: "bg-red-500/15 text-red-500 border-red-500/30", label: "DIVERGING" },
+    insufficient_data: { badge: "bg-gray-500/15 text-gray-500 border-gray-500/30", label: "NOT ENOUGH DATA" },
+    no_live_data: { badge: "bg-gray-500/15 text-gray-500 border-gray-500/30", label: "NO LIVE DATA" },
+    no_backtest: { badge: "bg-gray-500/15 text-gray-500 border-gray-500/30", label: "NO BACKTEST" },
 };
 
 const VERDICT_STYLE: Record<string, string> = {
@@ -47,6 +56,8 @@ export function ExperimentsTab() {
     const [detail, setDetail] = useState<ExperimentDetail | null>(null);
     const [sensParam, setSensParam] = useState("");
     const [sens, setSens] = useState<SensitivityResult | null>(null);
+    const [drift, setDrift] = useState<DriftResult | null>(null);
+    const [driftLoading, setDriftLoading] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -71,7 +82,15 @@ export function ExperimentsTab() {
     }, []);
 
     useEffect(() => { loadList(); }, [loadList]);
-    useEffect(() => { if (selected) loadDetail(selected); }, [selected, loadDetail]);
+    useEffect(() => { if (selected) { loadDetail(selected); setDrift(null); } }, [selected, loadDetail]);
+
+    const checkDrift = useCallback(async () => {
+        if (!selected) return;
+        setDriftLoading(true);
+        try { setDrift(await fetchDrift(selected)); setError(null); }
+        catch (e) { setError(e instanceof Error ? e.message : "drift check failed"); }
+        finally { setDriftLoading(false); }
+    }, [selected]);
 
     const runSensitivity = useCallback(async () => {
         if (!selected || !sensParam.trim()) return;
@@ -140,6 +159,12 @@ exp.status()   # burned / warning / ok — before you trust the Sharpe`}
                         {detail.chain_valid ? "ledger chain intact" : "LEDGER TAMPERED"}
                     </span>
                 )}
+                {selected && detail && detail.status.budget_state !== "empty" && (
+                    <a href={certificateUrl(selected)} target="_blank" rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 h-9 px-3 rounded-lg border border-gray-200 dark:border-[#1B2536] text-xs font-semibold text-gray-600 dark:text-gray-300 hover:border-blue-500/60">
+                        <FileBadge className="w-3.5 h-3.5" /> Provenance certificate
+                    </a>
+                )}
             </div>
 
             {/* ── Budget meter ── */}
@@ -163,6 +188,45 @@ exp.status()   # burned / warning / ok — before you trust the Sharpe`}
                     <p className="text-sm text-gray-600 dark:text-gray-300">{status.message}</p>
                     {status.best_params && (
                         <p className="text-xs text-gray-500 mt-2">Best config: <span className="font-mono">{fmtParams(status.best_params)}</span></p>
+                    )}
+                </div>
+            )}
+
+            {/* ── Live-drift monitor ── */}
+            {status && status.budget_state !== "empty" && (
+                <div className="rounded-2xl border border-gray-200 dark:border-[#1B2536] bg-white dark:bg-[#0B111C] p-5">
+                    <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
+                        <div className="flex items-center gap-2">
+                            <Radar className="w-4 h-4 text-blue-500" />
+                            <h3 className="text-xs font-bold uppercase tracking-widest text-gray-600 dark:text-gray-300">Live-vs-Backtest Drift</h3>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            {drift && (
+                                <span className={`px-3 py-1 rounded-full border text-xs font-bold ${DRIFT_STYLE[drift.state]?.badge ?? DRIFT_STYLE.no_backtest.badge}`}>
+                                    {DRIFT_STYLE[drift.state]?.label ?? drift.state.toUpperCase()}
+                                </span>
+                            )}
+                            <button onClick={checkDrift} disabled={driftLoading}
+                                className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold disabled:opacity-50">
+                                <RefreshCw className={`w-3.5 h-3.5 ${driftLoading ? "animate-spin" : ""}`} /> Check drift
+                            </button>
+                        </div>
+                    </div>
+                    {drift ? (
+                        <>
+                            {drift.backtest_sharpe_ann !== undefined && (
+                                <div className="grid grid-cols-3 gap-3 mb-3">
+                                    <Stat label="Backtest Sharpe" value={drift.backtest_sharpe_ann!.toFixed(2)} hint={`n=${drift.n_backtest}`} />
+                                    <Stat label="Live Sharpe" value={drift.live_sharpe_ann!.toFixed(2)} hint={`n=${drift.n_live}`} />
+                                    <Stat label="Consistency" value={drift.consistency_prob!.toFixed(3)} hint="P(live ≥ backtest)" />
+                                </div>
+                            )}
+                            <p className="text-sm text-gray-600 dark:text-gray-300">{drift.message}</p>
+                        </>
+                    ) : (
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                            Log live fills via <code>exp.log_live()</code> or the MCP <code>log_live</code> tool, then check whether the deployed edge still matches the backtest.
+                        </p>
                     )}
                 </div>
             )}

@@ -21,9 +21,18 @@ PBO_MIN_OBS_PER_SPLIT = 4
 
 
 def _distinct_configs(runs: list[dict]) -> list[dict]:
-    """Latest run per params_hash (re-running one config mines no new noise)."""
+    """Latest *backtest* run per params_hash.
+
+    Live fills (``source == "live"``) are excluded: they are the deployed
+    config's real-world track record, not a new variant in the search, and
+    mixing them into the config pool would corrupt the multiple-testing
+    correction. See :mod:`quantproto.tracker.drift` for live-vs-backtest
+    consistency instead.
+    """
     by_hash: dict[str, dict] = {}
     for r in runs:  # runs are ordered by seq ascending
+        if r.get("source") == "live":
+            continue
         by_hash[r["params_hash"]] = r
     return list(by_hash.values())
 

@@ -5,6 +5,8 @@
     qp runs <experiment>        run history table
     qp report <experiment>      full robustness report (JSON)
     qp sensitivity <experiment> <param>
+    qp drift <experiment>       live-vs-backtest consistency check
+    qp certificate <experiment> shareable provenance certificate (HTML)
     qp verify <experiment>      hash-chain check
 """
 
@@ -84,6 +86,35 @@ def cmd_sensitivity(ledger: RunLedger, args) -> int:
     return 0
 
 
+def cmd_drift(ledger: RunLedger, args) -> int:
+    exp = Experiment(args.experiment, ledger=ledger)
+    d = exp.drift()
+    if "backtest_sharpe_ann" in d:
+        print(f"backtest Sharpe(ann): {d['backtest_sharpe_ann']}  (n={d['n_backtest']})")
+        print(f"live Sharpe(ann)    : {d['live_sharpe_ann']}  (n={d['n_live']})")
+        print(f"consistency prob    : {d['consistency_prob']}")
+    print(f"state: {d['state'].upper()}")
+    print(d["message"])
+    return 0
+
+
+def cmd_certificate(ledger: RunLedger, args) -> int:
+    exp = Experiment(args.experiment, ledger=ledger)
+    from quantproto.tracker.certificate import render_certificate_html
+
+    try:
+        report = exp.report(turnover=args.turnover)
+    except ValueError as e:
+        print(str(e))
+        return 1
+    html = render_certificate_html(report)
+    out = args.out or f"{args.experiment}-certificate.html"
+    with open(out, "w") as f:
+        f.write(html)
+    print(f"wrote {out}")
+    return 0
+
+
 def cmd_verify(ledger: RunLedger, args) -> int:
     ok = Experiment(args.experiment, ledger=ledger).verify()
     print(f"chain {'VALID' if ok else 'BROKEN — ledger has been tampered with'}")
@@ -97,7 +128,7 @@ def main(argv: list[str] | None = None) -> int:
     sub = p.add_subparsers(dest="cmd", required=True)
 
     sub.add_parser("list", help="list experiments")
-    for name in ("status", "runs", "verify"):
+    for name in ("status", "runs", "verify", "drift"):
         sp = sub.add_parser(name)
         sp.add_argument("experiment")
     sp = sub.add_parser("report")
@@ -106,12 +137,17 @@ def main(argv: list[str] | None = None) -> int:
     sp = sub.add_parser("sensitivity")
     sp.add_argument("experiment")
     sp.add_argument("param")
+    sp = sub.add_parser("certificate")
+    sp.add_argument("experiment")
+    sp.add_argument("--turnover", type=float, default=1.0)
+    sp.add_argument("--out", default=None, help="output HTML path")
 
     args = p.parse_args(argv)
     ledger = RunLedger(args.ledger)
     handlers = {
         "list": cmd_list, "status": cmd_status, "runs": cmd_runs,
         "report": cmd_report, "sensitivity": cmd_sensitivity, "verify": cmd_verify,
+        "drift": cmd_drift, "certificate": cmd_certificate,
     }
     try:
         return handlers[args.cmd](ledger, args)
