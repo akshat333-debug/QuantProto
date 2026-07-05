@@ -117,3 +117,32 @@ export async function sendAIChat(question: string, analysisData?: Record<string,
     if (!res.ok) throw new Error("AI chat request failed");
     return res.json();
 }
+
+/* ─── Experiment tracker API ─────────────────────────────────── */
+
+import type { ExperimentSummary, ExperimentDetail, SensitivityResult } from "./types";
+
+export async function fetchExperiments(): Promise<ExperimentSummary[]> {
+    const res = await fetch("/api/experiments");
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const d: { experiments: ExperimentSummary[] } = await res.json();
+    return d.experiments;
+}
+
+export async function fetchExperimentDetail(name: string): Promise<ExperimentDetail> {
+    const res = await fetch(`/api/experiments/${encodeURIComponent(name)}`);
+    if (!res.ok) {
+        const errBody = await res.json().catch(() => ({ detail: res.statusText }));
+        throw new Error(errBody.detail || `HTTP ${res.status}`);
+    }
+    return res.json();
+}
+
+export async function fetchSensitivity(name: string, param: string): Promise<SensitivityResult> {
+    const res = await fetch(`/api/experiments/${encodeURIComponent(name)}/sensitivity?param=${encodeURIComponent(param)}`);
+    if (!res.ok) {
+        const errBody = await res.json().catch(() => ({ detail: res.statusText }));
+        throw new Error(errBody.detail || `HTTP ${res.status}`);
+    }
+    return res.json();
+}

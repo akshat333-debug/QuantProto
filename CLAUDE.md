@@ -66,6 +66,11 @@ uvicorn quantproto.dashboard.api:app --port 9000 --reload
 
 # Start MCP server
 python -m quantproto.mcp.server
+
+# Experiment tracker CLI
+qp list                        # experiments + run counts
+qp status <experiment>         # research-budget meter
+qp sensitivity <exp> <param>   # parameter-sensitivity check
 ```
 
 ### Frontend (Next.js)
@@ -126,9 +131,10 @@ IntegrityAgent (gate) → decision: PROCEED / REJECT
 | `quantproto/factor_engine.py` | Cross-sectional composite signal; `DEFAULT_DIRECTIONS` prevents sign cancellation |
 | `quantproto/risk_engine.py` | VaR, CVaR, Sharpe, Sortino, HHI + risk gate |
 | `quantproto/storage/` | Hash-chained audit-run persistence (SQLite default, Postgres via `DATABASE_URL`) |
-| `quantproto/mcp/server.py` | FastMCP server; exposes `robustness_audit`, `deflated_sharpe`, `prob_backtest_overfit`, `cost_sensitivity`, `probabilistic_sharpe` |
-| `quantproto/dashboard/api.py` | FastAPI; `/api/run-analysis`, `/api/audit` (BYO), `/api/runs`, `/api/runs/{id}/report` (shareable HTML), `/api/stress-test` |
-| `dashboard/` | Next.js frontend with Integrity Audit tab + bring-your-own panel |
+| `quantproto/tracker/` | **Pivot core.** Experiment tracker: hash-chained run ledger (`~/.quantproto/experiments.db`, override `QUANTPROTO_LEDGER`), research-budget meter (DSR/PBO/spurious-Sharpe from *observed* trial history), parameter sensitivity, `qp` CLI. See `docs/tracker-design.md` |
+| `quantproto/mcp/server.py` | FastMCP server; exposes `robustness_audit`, `deflated_sharpe`, `prob_backtest_overfit`, `cost_sensitivity`, `probabilistic_sharpe` + tracker tools `log_run`, `research_budget`, `experiment_report` |
+| `quantproto/dashboard/api.py` | FastAPI; `/api/run-analysis`, `/api/audit` (BYO), `/api/runs`, `/api/runs/{id}/report` (shareable HTML), `/api/stress-test`, `/api/experiments*` (tracker) |
+| `dashboard/` | Next.js frontend with Integrity Audit tab, bring-your-own panel + Experiments tab (budget meter, run history, sensitivity) |
 
 ### Critical invariants (guarded by `tests/test_wiring.py`)
 

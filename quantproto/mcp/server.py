@@ -427,6 +427,79 @@ def robustness_audit(
     return report
 
 
+# ══════════════════════════════════════════════════════════════════════
+# EXPERIMENT TRACKER TOOLS (audit gate for agentic strategy search)
+# ══════════════════════════════════════════════════════════════════════
+#
+# Agents that generate and iterate on strategies should call ``log_run``
+# after every backtest and ``research_budget`` before promoting a result.
+# The trial count that deflates the Sharpe is then observed, not claimed.
+
+@mcp.tool()
+def log_run(
+    experiment: str,
+    returns: list[float],
+    params: dict[str, Any] | None = None,
+    source: str = "mcp",
+) -> dict[str, Any]:
+    """Log one backtest run into the tamper-evident experiment ledger.
+
+    Call after EVERY configuration you try — including failures and dead
+    ends. The honest trial count is what makes the overfitting statistics
+    meaningful. Returns the ledger receipt plus the updated budget state.
+    """
+    rate_limiter.consume()
+    start = time.time()
+    validate_returns_input(returns)
+    from quantproto.tracker import experiment as open_experiment
+
+    exp = open_experiment(experiment)
+    receipt = exp.log(returns, params=params, source=source)
+    status = exp.status()
+    _log_tool_call("log_run", start)
+    return {
+        "receipt": receipt,
+        "budget_state": status["budget_state"],
+        "n_configs": status["n_configs"],
+        "message": status["message"],
+    }
+
+
+@mcp.tool()
+def research_budget(experiment: str) -> dict[str, Any]:
+    """Research-budget meter for a tracked experiment.
+
+    Computes, from the logged search history: the honest trial count, best
+    vs expected-max-spurious annualized Sharpe, DSR, PBO (when ≥ 8 configs),
+    haircut Sharpe, and a burned/warning/ok verdict. Use as a go/no-go gate
+    before trusting or promoting any strategy from this experiment.
+    """
+    rate_limiter.consume()
+    start = time.time()
+    from quantproto.tracker import experiment as open_experiment
+
+    status = open_experiment(experiment).status()
+    _log_tool_call("research_budget", start)
+    return status
+
+
+@mcp.tool()
+def experiment_report(experiment: str, turnover: float = 1.0) -> dict[str, Any]:
+    """Full robustness report of an experiment's best config.
+
+    The variant matrix and trial count are taken from the ledger, so PBO and
+    the Deflated Sharpe reflect the real search. Includes chain-validity so
+    the report can serve as a provenance certificate.
+    """
+    rate_limiter.consume()
+    start = time.time()
+    from quantproto.tracker import experiment as open_experiment
+
+    report = open_experiment(experiment).report(turnover=turnover)
+    _log_tool_call("experiment_report", start)
+    return report
+
+
 # ── Entry point ───────────────────────────────────────────────────────
 
 if __name__ == "__main__":

@@ -486,6 +486,85 @@ def run_report(run_id: str):
     return HTMLResponse(render_report_html(run))
 
 
+# ── Experiment tracker (research-budget meter) ────────────────────────
+
+def _open_experiment(name: str):
+    from quantproto.tracker import experiment as open_experiment
+
+    if not name or len(name) > 64:
+        raise HTTPException(status_code=400, detail="experiment name must be 1-64 chars")
+    return open_experiment(name)
+
+
+class LogRunRequest(BaseModel):
+    """Log one backtest run into an experiment's ledger."""
+    returns: list[float] | None = None
+    equity: list[float] | None = None
+    params: dict = Field(default_factory=dict)
+    source: str = Field(default="api", max_length=32)
+
+    @field_validator("returns", "equity")
+    @classmethod
+    def _len_guard(cls, v):
+        if v is not None and len(v) > 100_000:
+            raise ValueError("series too long (max 100000 points)")
+        return v
+
+
+@app.get("/api/experiments")
+def list_experiments():
+    """List tracked experiments with run counts."""
+    from quantproto.tracker import RunLedger
+
+    ledger = RunLedger()
+    try:
+        return {"experiments": ledger.list_experiments()}
+    finally:
+        ledger.close()
+
+
+@app.get("/api/experiments/{name}")
+def experiment_status(name: str):
+    """Budget meter + run history (params/sharpe only, no raw returns)."""
+    exp = _open_experiment(name)
+    return {"status": exp.status(), "runs": exp.runs(), "chain_valid": exp.verify()}
+
+
+@app.post("/api/experiments/{name}/runs")
+def experiment_log_run(name: str, req: LogRunRequest):
+    """Append one run to the experiment ledger; returns receipt + budget state."""
+    provided = [k for k in ("returns", "equity") if getattr(req, k)]
+    if len(provided) != 1:
+        raise HTTPException(status_code=400, detail="Provide exactly one of: returns, equity.")
+    exp = _open_experiment(name)
+    try:
+        if req.returns is not None:
+            receipt = exp.log(req.returns, params=req.params, source=req.source)
+        else:
+            series = equity_to_returns(req.equity)
+            receipt = exp.log(series, params=req.params, source=req.source)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    status = exp.status()
+    return {"receipt": receipt, "budget_state": status["budget_state"],
+            "n_configs": status["n_configs"], "message": status["message"]}
+
+
+@app.get("/api/experiments/{name}/sensitivity")
+def experiment_sensitivity(name: str, param: str):
+    """Sharpe vs one parameter's values — plateau or overfit peak."""
+    return _open_experiment(name).sensitivity(param)
+
+
+@app.get("/api/experiments/{name}/report")
+def experiment_report(name: str, turnover: float = 1.0):
+    """Full robustness report of the best config, variant matrix auto-built."""
+    try:
+        return _open_experiment(name).report(turnover=turnover)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
 # ── GenAI endpoints ───────────────────────────────────────────────────
 
 class SummaryRequest(BaseModel):

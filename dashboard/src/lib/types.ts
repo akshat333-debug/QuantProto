@@ -59,3 +59,47 @@ export type StressData = {
 };
 
 export type TooltipPayload = { color: string; name: string; value: number | string };
+
+/* ─── Experiment tracker ─────────────────────────────────────── */
+
+export type ExperimentSummary = { name: string; created_ts: string; n_runs: number };
+
+export type BudgetStatus = {
+    n_runs: number;
+    n_configs: number;
+    budget_state: "empty" | "ok" | "warning" | "burned";
+    message: string;
+    best_run_id?: string;
+    best_params?: Record<string, unknown>;
+    best_sharpe_ann?: number;
+    spurious_sharpe_ann?: number;
+    haircut_sharpe_ann?: number;
+    psr?: number;
+    dsr?: number | null;
+    pbo?: { pbo: number; oos_degradation: number; prob_oos_loss: number; n_configs: number } | null;
+    n_obs_best?: number;
+};
+
+export type ExperimentRun = {
+    id: string; seq: number; ts: string;
+    params: Record<string, unknown>; params_hash: string;
+    source: string; code_hash: string | null;
+    n_obs: number; sharpe: number;
+};
+
+export type ExperimentDetail = {
+    status: BudgetStatus;
+    runs: ExperimentRun[];
+    chain_valid: boolean;
+};
+
+export type SensitivityResult = {
+    param: string;
+    n_values: number;
+    values: (number | string)[];
+    sharpe_ann_by_value?: number[];
+    peak_value?: number | string;
+    neighbour_ratio?: number | null;
+    verdict: "plateau" | "soft_peak" | "sharp_peak" | "inconclusive" | "insufficient";
+    message: string;
+};

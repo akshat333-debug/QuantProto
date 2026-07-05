@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { TrendingUp, RefreshCw, BarChart3, Activity, Shield, GitBranch, Zap, Crosshair, ShieldCheck, Gauge, Scale } from "lucide-react";
+import { TrendingUp, RefreshCw, BarChart3, Activity, Shield, GitBranch, Zap, Crosshair, ShieldCheck, Gauge, Scale, FlaskConical } from "lucide-react";
 import type { AnalysisData, StressData } from "@/lib/types";
 import { runAnalysis as apiRunAnalysis, runStressTest as apiRunStress, fetchScenarios } from "@/lib/api";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
@@ -15,6 +15,7 @@ import { RegimeTab } from "@/components/tabs/RegimeTab";
 import { PortfolioTab } from "@/components/tabs/PortfolioTab";
 import { StressTestTab } from "@/components/tabs/StressTestTab";
 import { IntegrityTab } from "@/components/tabs/IntegrityTab";
+import { ExperimentsTab } from "@/components/tabs/ExperimentsTab";
 import { ChatPanel } from "@/components/ui/ChatPanel";
 
 /* ─── Tab definitions ─────────────────────────────────────────── */
@@ -22,6 +23,7 @@ import { ChatPanel } from "@/components/ui/ChatPanel";
 const TABS = [
     { id: "overview", label: "Overview", icon: Activity },
     { id: "integrity", label: "Integrity Audit", icon: Crosshair },
+    { id: "experiments", label: "Experiments", icon: FlaskConical },
     { id: "equity", label: "Performance", icon: TrendingUp },
     { id: "risk", label: "Risk", icon: Shield },
     { id: "regime", label: "Regime", icon: GitBranch },
@@ -37,6 +39,7 @@ export default function Dashboard() {
     const [loading, setLoading] = useState(false);
     const [stressLoading, setStressLoading] = useState(false);
     const [activeTab, setActiveTab] = useState("overview");
+    const [emptyView, setEmptyView] = useState<"audit" | "experiments">("audit");
     const [scenario, setScenario] = useState("2008_crisis");
     const [error, setError] = useState<string | null>(null);
     const [scenarios, setScenarios] = useState<string[]>([]);
@@ -209,8 +212,23 @@ export default function Dashboard() {
                                         </div>
                                     </div>
                                 </div>
-                                {/* Bring-your-own-backtest auditor — usable with no engine run */}
-                                <IntegrityTab data={null} />
+                                {/* BYO auditor + experiment tracker — usable with no engine run */}
+                                <div role="tablist" aria-label="Standalone tools"
+                                    className="flex gap-1 mb-6 p-1 rounded-xl bg-gray-100 dark:bg-[#0B111C] border border-gray-200 dark:border-[#1B2536] w-fit">
+                                    {([
+                                        { id: "audit", label: "Integrity Audit", icon: Crosshair },
+                                        { id: "experiments", label: "Experiments", icon: FlaskConical },
+                                    ] as const).map(({ id, label, icon: Icon }) => (
+                                        <button key={id} role="tab" aria-selected={emptyView === id}
+                                            onClick={() => setEmptyView(id)}
+                                            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs sm:text-[13px] font-medium whitespace-nowrap transition-all ${emptyView === id
+                                                ? "bg-white dark:bg-[#1B2536] text-gray-900 dark:text-white shadow-sm"
+                                                : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"}`}>
+                                            <Icon className={`w-3.5 h-3.5 ${emptyView === id ? "text-blue-500" : ""}`} />{label}
+                                        </button>
+                                    ))}
+                                </div>
+                                {emptyView === "audit" ? <IntegrityTab data={null} /> : <ExperimentsTab />}
                             </>
                         ) : (
                             <>
@@ -231,6 +249,7 @@ export default function Dashboard() {
 
                                 {activeTab === "overview" && <OverviewTab data={data} />}
                                 {activeTab === "integrity" && <IntegrityTab data={data} />}
+                                {activeTab === "experiments" && <ExperimentsTab />}
                                 {activeTab === "equity" && <PerformanceTab data={data} />}
                                 {activeTab === "risk" && <RiskTab data={data} />}
                                 {activeTab === "regime" && <RegimeTab data={data} />}
