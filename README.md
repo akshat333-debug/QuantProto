@@ -3,7 +3,7 @@
 > **The backtest-integrity auditor.** Paste any strategy's returns and find out whether its edge is real or an artefact of overfitting — Deflated Sharpe, Probability of Backtest Overfitting, cost break-even, and bias red-flags, distilled into one Robustness Score. Exposed as MCP tools so agents can audit strategies too.
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://python.org)
-[![Tests](https://img.shields.io/badge/tests-348%20passing-brightgreen.svg)]()
+[![Tests](https://img.shields.io/badge/tests-396%20passing-brightgreen.svg)]()
 [![CI](https://img.shields.io/github/actions/workflow/status/akshat333-debug/QuantProto/ci.yml?label=CI)](https://github.com/akshat333-debug/QuantProto/actions)
 
 ---
@@ -87,6 +87,45 @@ report = robustness_report(best_variant_returns, variant_matrix=all_variants)
 print(report["pbo"]["pbo"])   # 0.0 = generalises, 1.0 = pure overfit
 ```
 
+## Experiment tracker — the honest trial count
+
+Deflated Sharpe and PBO both need one input nobody actually has: **how many
+configurations were really tried.** The tracker removes the guesswork by
+logging every run as you search, so `n_trials` and the variant matrix build
+themselves — a Weights & Biases for backtests.
+
+```python
+import quantproto as qp
+
+exp = qp.experiment("spy-meanrev")
+with exp.run(params={"lookback": 20, "stop": 0.02}) as run:
+    stats = my_backtest(lookback=20, stop=0.02)
+    run.log_returns(stats.daily_returns)
+
+exp.status()               # research-budget meter: DSR/PBO from *observed* trials
+exp.sensitivity("lookback")  # Sharpe vs. parameter value, neighbour degradation
+exp.drift()                 # live-vs-backtest PSR check once you're trading it
+```
+
+CLI (console script `qp`):
+
+```bash
+qp list                      # experiments + run counts
+qp status <experiment>       # research-budget meter
+qp runs <experiment>          # run table (ts, params, sharpe)
+qp report <experiment>       # full robustness audit of the best run
+qp sensitivity <exp> <param> # parameter-sensitivity check
+qp drift <experiment>        # live-vs-backtest divergence (consistent/watch/diverging)
+qp certificate <experiment>  # shareable, tamper-evident HTML provenance certificate
+qp verify <experiment>       # hash-chain intact?
+```
+
+The ledger is hash-chained (SQLite at `~/.quantproto/experiments.db` by
+default, override with `QUANTPROTO_LEDGER`; Postgres via `DATABASE_URL`) —
+so the trial count in the budget meter and the provenance certificate is
+tamper-evident, not self-reported. See [docs/tracker-design.md](docs/tracker-design.md)
+for the full design.
+
 ## Agent-callable (MCP)
 
 The whole auditor is exposed as MCP tools, so an AI agent can audit a strategy as part of a workflow:
@@ -97,6 +136,8 @@ The whole auditor is exposed as MCP tools, so an AI agent can audit a strategy a
 | `prob_backtest_overfit` | PBO via CSCV over a strategy-variant matrix |
 | `deflated_sharpe` / `probabilistic_sharpe` | Multiple-testing & non-normality corrected Sharpe |
 | `cost_sensitivity` | Net Sharpe across a cost grid + break-even bps |
+| `log_run` / `research_budget` / `experiment_report` | Experiment tracker: log a trial, get the budget meter, full audit of the best run |
+| `log_live` / `live_drift` | Log live fills against a tracked experiment; PSR-test live vs. backtest divergence |
 
 Run the server: `python -m quantproto.mcp.server`. All tools include rate limiting (Redis-backed when `REDIS_URL` is set) and input sanitisation.
 
@@ -161,21 +202,24 @@ quantproto/
 ├── walk_forward.py    # Walk-forward backtester (cost-aware) + bootstrap CI
 ├── execution_model.py # Transaction-cost / slippage model (drives backtest costs)
 ├── storage/           # Durable, hash-chained audit-run store (SQLite/Postgres)
+├── tracker/           # Experiment tracker: hash-chained run ledger, research-budget
+│                      #   meter, sensitivity, live-drift monitor, provenance certificate
 ├── analytics/ portfolio/ risk/ compliance/ data/ strategy/ trading/
-└── dashboard/         # FastAPI REST API (run-analysis, audit, runs, AI summaries)
+└── dashboard/         # FastAPI REST API (run-analysis, audit, runs, experiments, AI summaries)
 
-dashboard/             # Next.js frontend (Integrity tab + bring-your-own auditor)
-tests/                 # 348 tests
+dashboard/             # Next.js frontend (Integrity tab + Experiments tab + bring-your-own auditor)
+tests/                 # 396 tests
 ```
 
 ## Testing
 
 ```bash
-pytest                                 # full suite (348)
+pytest                                 # full suite (396)
 pytest tests/test_pbo.py               # overfitting detection
 pytest tests/test_deflated_sharpe.py   # DSR / PSR statistics
 pytest tests/test_wiring.py            # guards: components stay connected
 pytest tests/test_adapters.py          # Backtrader / QC / bt / zipline adapters
+pytest tests/test_tracker*.py          # ledger, budget meter, drift, certificate
 ```
 
 The integrity tests are property-based: synthetic overfit data must score `likely_overfit` and yield high PBO; a genuine edge must score `robust` with low PBO; purged folds must have zero leakage.
@@ -184,7 +228,8 @@ The integrity tests are property-based: synthetic overfit data must score `likel
 
 | Variable | Description |
 |----------|-------------|
-| `DATABASE_URL` | Postgres/TimescaleDB for audit-run persistence (default: local SQLite) |
+| `DATABASE_URL` | Postgres/TimescaleDB for audit-run and experiment-tracker persistence (default: local SQLite) |
+| `QUANTPROTO_LEDGER` | Override path for the experiment tracker's SQLite ledger (default `~/.quantproto/experiments.db`) |
 | `REDIS_URL` | Redis for distributed rate limiting (default: in-memory) |
 | `GEMINI_API_KEY` | Optional — AI-powered analysis summaries (mock fallback otherwise) |
 | `ALLOWED_ORIGINS` | CORS origins for the API (default `http://localhost:3000`) |
