@@ -6,6 +6,12 @@
 [![Tests](https://img.shields.io/badge/tests-396%20passing-brightgreen.svg)]()
 [![CI](https://img.shields.io/github/actions/workflow/status/akshat333-debug/QuantProto/ci.yml?label=CI)](https://github.com/akshat333-debug/QuantProto/actions)
 
+**▶ Live demo: [quantproto.vercel.app](https://quantproto.vercel.app)**
+
+<!-- DEMO GIF placeholder: record ~12s (paste returns → audit → Robustness Score verdict), save as docs/demo.gif, then uncomment the next line:
+![QuantProto demo](docs/demo.gif)
+-->
+
 ---
 
 ## Why this exists
