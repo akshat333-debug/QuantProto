@@ -8,6 +8,8 @@
 
 **▶ Live demo: [quantproto.vercel.app](https://quantproto.vercel.app)**
 
+![QuantProto demo — paste returns, get a Robustness verdict](docs/demo.gif)
+
 ![Overview — Robustness Score, decision gate, risk metrics](docs/screenshots/overview.png)
 
 <details>
