@@ -8,9 +8,24 @@
 
 **▶ Live demo: [quantproto.vercel.app](https://quantproto.vercel.app)**
 
-<!-- DEMO GIF placeholder: record ~12s (paste returns → audit → Robustness Score verdict), save as docs/demo.gif, then uncomment the next line:
-![QuantProto demo](docs/demo.gif)
--->
+![Overview — Robustness Score, decision gate, risk metrics](docs/screenshots/overview.png)
+
+<details>
+<summary><strong>More screenshots</strong> — Integrity Audit, Experiment tracker, bring-your-own-backtest</summary>
+
+**Integrity Audit** — score components, key statistics, cost-sensitivity curve:
+
+![Integrity Audit tab](docs/screenshots/integrity-audit.png)
+
+**Experiment tracker** — research budget from the *observed* trial history, hash-chained ledger, provenance certificate:
+
+![Experiments tab](docs/screenshots/experiments.png)
+
+**Bring your own backtest** — no engine run required:
+
+![Hero and BYO panel](docs/screenshots/hero-byo.png)
+
+</details>
 
 ---
 
