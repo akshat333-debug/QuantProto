@@ -5,13 +5,15 @@ Uses HS256 with configurable expiry. Tokens carry agent_id and issued_at.
 
 from __future__ import annotations
 
+import os
 import time
 from typing import Any
 
 import jwt
 
 
-DEFAULT_SECRET = "quantproto-dev-secret-change-in-prod"
+# Overridable so a deployment never signs with the repo's public dev secret.
+DEFAULT_SECRET = os.getenv("AGENT_JWT_SECRET", "quantproto-dev-secret-change-in-prod")
 ALGORITHM = "HS256"
 DEFAULT_EXPIRY_SECONDS = 300  # 5 minutes
 

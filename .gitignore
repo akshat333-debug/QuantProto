@@ -29,3 +29,4 @@ dashboard/out/
 *.swo
 .DS_Store
 .vercel
+.coverage
