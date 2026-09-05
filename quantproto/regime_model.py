@@ -93,14 +93,34 @@ class RegimeHMM:
         -------
         self (for chaining).
         """
-        self._model = GaussianHMM(
-            n_components=self.n_states,
-            covariance_type="full",
-            n_iter=100,
-            random_state=self.seed,
-        )
         X = features.values
-        self._model.fit(X)
+        # "full" covariance can degenerate to non-positive-definite during EM
+        # (raises ValueError from hmmlearn) — the exact seeds that break vary
+        # with numpy/scipy versions. Regularise, then fall back to the
+        # better-conditioned "diag" before giving up.
+        last_err: Exception | None = None
+        for cov_type, min_covar in (("full", 1e-3), ("full", 1e-2), ("diag", 1e-3)):
+            model = GaussianHMM(
+                n_components=self.n_states,
+                covariance_type=cov_type,
+                min_covar=min_covar,
+                n_iter=100,
+                random_state=self.seed,
+            )
+            try:
+                model.fit(X)
+                model.predict(X)  # decode can fail even when fit() succeeded
+            except ValueError as e:  # non-PSD covariance
+                last_err = e
+                continue
+            self._model = model
+            break
+        else:
+            raise RuntimeError(
+                "HMM failed to fit: covariance stayed non-positive-definite "
+                "under every fallback. Check for constant or near-duplicate "
+                f"feature columns. Underlying error: {last_err}"
+            ) from last_err
 
         # Label states by their mean-return feature (col 0)
         means = self._model.means_[:, 0]

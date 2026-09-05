@@ -107,7 +107,7 @@ export function ExperimentsTab() {
     /* ── Empty state: onboarding snippet ── */
     if (experiments.length === 0) {
         return (
-            <div className="rounded-2xl border border-gray-200 dark:border-[#1B2536] bg-white dark:bg-[#0B111C] p-8">
+            <div role="tabpanel" id="panel-experiments" aria-labelledby="tab-experiments" className="rounded-2xl border border-gray-200 dark:border-[#1B2536] bg-white dark:bg-[#0B111C] p-8">
                 {error && <p className="text-sm text-red-400 mb-4">{error}</p>}
                 <div className="flex items-center gap-2 mb-3">
                     <FlaskConical className="w-5 h-5 text-blue-500" />
@@ -135,7 +135,7 @@ exp.status()   # burned / warning / ok — before you trust the Sharpe`}
     }
 
     return (
-        <div className="space-y-6">
+        <div role="tabpanel" id="panel-experiments" aria-labelledby="tab-experiments" className="space-y-6">
             {error && <p className="text-sm text-red-400">{error}</p>}
 
             {/* ── Selector row ── */}

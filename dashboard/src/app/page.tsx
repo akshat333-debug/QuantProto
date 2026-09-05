@@ -39,7 +39,7 @@ export default function Dashboard() {
     const [loading, setLoading] = useState(false);
     const [stressLoading, setStressLoading] = useState(false);
     const [activeTab, setActiveTab] = useState("overview");
-    const [emptyView, setEmptyView] = useState<"audit" | "experiments">("audit");
+    const [emptyView, setEmptyView] = useState<"integrity" | "experiments">("integrity");
     const [scenario, setScenario] = useState("2008_crisis");
     const [error, setError] = useState<string | null>(null);
     const [scenarios, setScenarios] = useState<string[]>([]);
@@ -216,10 +216,11 @@ export default function Dashboard() {
                                 <div role="tablist" aria-label="Standalone tools"
                                     className="flex gap-1 mb-6 p-1 rounded-xl bg-gray-100 dark:bg-[#0B111C] border border-gray-200 dark:border-[#1B2536] w-fit">
                                     {([
-                                        { id: "audit", label: "Integrity Audit", icon: Crosshair },
+                                        { id: "integrity", label: "Integrity Audit", icon: Crosshair },
                                         { id: "experiments", label: "Experiments", icon: FlaskConical },
                                     ] as const).map(({ id, label, icon: Icon }) => (
                                         <button key={id} role="tab" aria-selected={emptyView === id}
+                                            aria-controls={`panel-${id}`} id={`tab-${id}`}
                                             onClick={() => setEmptyView(id)}
                                             className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs sm:text-[13px] font-medium whitespace-nowrap transition-all ${emptyView === id
                                                 ? "bg-white dark:bg-[#1B2536] text-gray-900 dark:text-white shadow-sm"
@@ -228,7 +229,7 @@ export default function Dashboard() {
                                         </button>
                                     ))}
                                 </div>
-                                {emptyView === "audit" ? <IntegrityTab data={null} /> : <ExperimentsTab />}
+                                {emptyView === "integrity" ? <IntegrityTab data={null} /> : <ExperimentsTab />}
                             </>
                         ) : (
                             <>

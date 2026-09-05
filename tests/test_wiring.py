@@ -94,3 +94,28 @@ class TestRiskGateWired:
             assert var_violations == []
         else:  # a genuinely bad VaR must still be caught
             assert var_violations
+
+
+class TestRegimeHMMRobustFit:
+    """RegimeHMM must not crash on non-positive-definite covariance.
+
+    Regression: `covariance_type="full"` degenerates during EM for some seeds
+    (8/30 before the fix, and the failing set shifts with numpy/scipy versions
+    — it broke CI on 3.11 while passing locally on 3.12). fit() could also
+    succeed while the *decode* later raised, so the fallback validates both.
+    """
+
+    def test_many_seeds_fit_and_predict(self):
+        from quantproto.regime import EnsembleRegime
+
+        rng = np.random.default_rng(42)
+        dates = pd.bdate_range("2022-01-03", periods=300)
+        prices = pd.DataFrame(
+            {t: 100 * np.exp(np.cumsum(rng.normal(0.0005, 0.02, 300)))
+             for t in ("A", "B", "C")},
+            index=dates,
+        )
+        returns = prices.pct_change().dropna()
+        for seed in range(25):
+            result = EnsembleRegime(seed=seed).fit_predict(returns)
+            assert "ensemble_state" in result
